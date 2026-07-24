@@ -2,8 +2,6 @@
 
 import express, { type Request, type Response, type Router } from 'express';
 import { verifySession } from 'supertokens-node/recipe/session/framework/express';
-import { ApiError } from '@rag-advisor-demo/shared/domain';
-
 import { loreStore } from '../store/loreStore.js'; // Assuming store is at this path
 import { RESOURCES } from '../db/resource.type.js';
 import {
@@ -13,6 +11,7 @@ import {
 	validateServiceId,
 } from '../util/routeHelpers.js';
 import { assertOwnedCharacter, assertOwnedSession, getSessionUserId } from '../util/authUtils.js';
+import { parseOfficialLoreMetadataForCharacters } from '../util/domainValidationUtils.js';
 
 const router: Router = express.Router();
 
@@ -89,19 +88,23 @@ router.post(
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
 		validateRequestData(req.body, 'body', ['content']);
-		const characterIds = Array.isArray(req.body.characterIds) ? req.body.characterIds : [];
-		await Promise.all(
-			characterIds.map((characterId: string) => assertOwnedCharacter(req, characterId))
-		);
-
+		const requestedCharacterIds: string[] = Array.isArray(req.body.characterIds)
+			? req.body.characterIds
+			: [];
+		const effectiveCharacterIds = new Set(requestedCharacterIds);
 		if (req.body.sessionId) {
 			const session = await assertOwnedSession(req, req.body.sessionId);
-			if (!characterIds.includes(session.characterId)) {
-				req.body.characterIds = [...characterIds, session.characterId];
-			}
-		} else if (req.body.category !== 'World' && characterIds.length === 0) {
-			throw new ApiError(400, 'Character lore must reference at least one owned character.');
+			effectiveCharacterIds.add(session.characterId);
 		}
+
+		const characterIds = [...effectiveCharacterIds];
+		const characters = await Promise.all(
+			characterIds.map((characterId) => assertOwnedCharacter(req, characterId))
+		);
+		const metadata = parseOfficialLoreMetadataForCharacters(req.body, characters);
+
+		req.body.characterIds = characterIds;
+		Object.assign(req.body, metadata);
 		req.body.userId = getSessionUserId(req);
 
 		const response = await loreStore.storeLore(req.body);

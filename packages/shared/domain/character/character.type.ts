@@ -2,6 +2,11 @@
 // if type is stored as metadata, it should be premitive type.
 import { GENDER_OPTION, METADATA_TYPES } from '../../config/constants.js';
 import { EmotionKey } from '../../config/emotionConstants.js';
+import { z } from 'zod';
+
+export const ASSISTANT_DOMAINS = ['finance', 'healthcare_operations'] as const;
+export const assistantDomainSchema = z.enum(ASSISTANT_DOMAINS);
+export type AssistantDomain = z.infer<typeof assistantDomainSchema>;
 
 export interface BeingMetadata {
 	name: string;
@@ -19,6 +24,8 @@ export interface CharacterMetadata extends BeingMetadata {
 	variant: string;
 	contact: string;
 	type: typeof METADATA_TYPES.CHARACTER;
+	/** Required by the server persistence boundary for demo Characters. */
+	domain?: AssistantDomain;
 }
 export interface CharacterDocument {
 	description: string; // Public character introduction and baseline LLM context
@@ -54,4 +61,5 @@ export type CharacterCdo = Pick<
 	| 'userId'
 	| 'worldLoreId'
 	| 'firstMessage'
+	| 'domain'
 >;

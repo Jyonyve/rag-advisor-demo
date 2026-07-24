@@ -6,6 +6,7 @@ import { getDatabase } from '../db/postgresClient.js';
 import { characters } from '../db/schema.js';
 import { handleServiceError } from '../util/serviceHelpers.js';
 import { getCharacterAvatarUrls, getCharacterPortraitUrls } from '../util/imageStorageUtils.js';
+import { parseRequiredAssistantDomain } from '../util/domainValidationUtils.js';
 
 const normalizeCharacter = (character: CharacterInfo): CharacterInfo => ({
 	...character,
@@ -104,6 +105,7 @@ export const characterStore = {
 			: createBasicCharacterInfo(character);
 		const updatedCharacter: CharacterInfo = {
 			...baseCharacter,
+			domain: parseRequiredAssistantDomain(baseCharacter.domain),
 			worldIntroduction: baseCharacter.worldIntroduction ?? '',
 			createdAt: baseCharacter.createdAt || now,
 			updatedAt: now,

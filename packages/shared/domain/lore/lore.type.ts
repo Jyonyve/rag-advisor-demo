@@ -1,6 +1,54 @@
 // src/shared/domain/lore/LoreInterfaces.ts
 
 import { METADATA_TYPES } from '../../config/index.js';
+import { AssistantDomain, assistantDomainSchema } from '../character/character.type.js';
+import { z } from 'zod';
+
+export const financeLoreStructuredMetadataSchema = z
+	.object({
+		domain: z.literal('finance'),
+		knowledgeType: z.enum(['product', 'disclosure', 'education']),
+		riskLevel: z.enum(['low', 'medium', 'high']).optional(),
+		minimumHorizonMonths: z.number().int().nonnegative().optional(),
+	})
+	.strict();
+
+export const healthcareOperationsLoreStructuredMetadataSchema = z
+	.object({
+		domain: z.literal('healthcare_operations'),
+		knowledgeType: z.enum(['workflow', 'policy', 'operations_guide']),
+		workflowCode: z.string().trim().min(1).optional(),
+	})
+	.strict();
+
+export const loreStructuredMetadataSchema = z.discriminatedUnion('domain', [
+	financeLoreStructuredMetadataSchema,
+	healthcareOperationsLoreStructuredMetadataSchema,
+]);
+
+export type LoreStructuredMetadata = z.infer<typeof loreStructuredMetadataSchema>;
+
+export const officialLoreMetadataSchema = z
+	.object({
+		domain: assistantDomainSchema,
+		fixtureId: z.string().trim().min(1),
+		isDemoData: z.literal(true),
+		dataVersion: z.string().trim().min(1),
+		dataAsOf: z.iso.date().optional(),
+		structuredMetadata: loreStructuredMetadataSchema,
+	})
+	.strict()
+	.superRefine((metadata, context) => {
+		if (metadata.domain !== metadata.structuredMetadata.domain) {
+			context.addIssue({
+				code: 'custom',
+				path: ['structuredMetadata', 'domain'],
+				message: 'Structured Lore metadata domain must match the Lore domain.',
+			});
+		}
+	});
+
+export type OfficialLoreMetadata = z.infer<typeof officialLoreMetadataSchema>;
 
 export type LoreIndexContentType =
 	| 'AFFECTED_CHARACTER'
@@ -37,6 +85,13 @@ interface BaseLoreMetadata {
 	generatedTitle: string;
 	summary: string;
 	category: LoreCategory; // Now ALL lore has category (world lore uses 'World')
+	/** Required and validated when Lore is persisted as official Character documentation. */
+	domain?: AssistantDomain;
+	fixtureId?: string;
+	isDemoData?: boolean;
+	dataVersion?: string;
+	dataAsOf?: string;
+	structuredMetadata?: LoreStructuredMetadata;
 }
 
 // World Lore: Shared world-building content

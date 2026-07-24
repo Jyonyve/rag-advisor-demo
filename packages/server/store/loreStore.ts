@@ -13,6 +13,7 @@ import { embeddingJobService } from '../service/embeddingJobService.js';
 import { loreToDocument } from '../util/documentUtils.js';
 import { RagTraceContext } from '../util/ragTraceUtils.js';
 import { FilterCriteria } from '../util/schemaUtils.js';
+import { parseOfficialLoreMetadata } from '../util/domainValidationUtils.js';
 
 const emptyResponse = (): LoreResponse => ({
 	ids: [],
@@ -74,25 +75,26 @@ export const filterLoreCandidates = (
 export const loreStore = {
 	storeLore: async (loreInfo: LoreInfo): Promise<{ loreId: string }> => {
 		const now = new Date().toISOString();
+		const validatedLore: LoreInfo = { ...loreInfo, ...parseOfficialLoreMetadata(loreInfo) };
 		const storedRows = await getDatabase()
 			.insert(lores)
 			.values({
-				loreId: loreInfo.loreId,
-				userId: loreInfo.userId,
-				loreType: loreInfo.type,
-				category: loreInfo.category,
-				data: loreInfo,
-				createdAt: loreInfo.createdAt || now,
-				updatedAt: loreInfo.updatedAt || now,
+				loreId: validatedLore.loreId,
+				userId: validatedLore.userId,
+				loreType: validatedLore.type,
+				category: validatedLore.category,
+				data: validatedLore,
+				createdAt: validatedLore.createdAt || now,
+				updatedAt: validatedLore.updatedAt || now,
 			})
 			.onConflictDoUpdate({
 				target: lores.loreId,
-				setWhere: eq(lores.userId, loreInfo.userId),
+				setWhere: eq(lores.userId, validatedLore.userId),
 				set: {
-					loreType: loreInfo.type,
-					category: loreInfo.category,
-					data: loreInfo,
-					updatedAt: loreInfo.updatedAt || now,
+					loreType: validatedLore.type,
+					category: validatedLore.category,
+					data: validatedLore,
+					updatedAt: validatedLore.updatedAt || now,
 				},
 			})
 			.returning({ loreId: lores.loreId });
@@ -101,12 +103,12 @@ export const loreStore = {
 		}
 		embeddingJobService.enqueue({
 			sourceType: 'lore',
-			sourceId: loreInfo.loreId,
-			userId: loreInfo.userId,
-			content: loreToDocument(loreInfo),
-			metadata: loreToMetadata(loreInfo) as unknown as Metadata,
+			sourceId: validatedLore.loreId,
+			userId: validatedLore.userId,
+			content: loreToDocument(validatedLore),
+			metadata: loreToMetadata(validatedLore) as unknown as Metadata,
 		});
-		return { loreId: loreInfo.loreId };
+		return { loreId: validatedLore.loreId };
 	},
 
 	getLore: async (loreId: string, userId: string): Promise<LoreResponse> => {

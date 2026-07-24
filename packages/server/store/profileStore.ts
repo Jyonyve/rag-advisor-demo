@@ -9,6 +9,7 @@ import { eq, ilike } from 'drizzle-orm';
 import { getDatabase } from '../db/postgresClient.js';
 import { profiles } from '../db/schema.js';
 import { handleServiceError } from '../util/serviceHelpers.js';
+import { parseRequiredDomainProfile } from '../util/domainValidationUtils.js';
 
 const toResponse = (profileInfos: ProfileInfo[]): ProfileResponse => ({
 	ids: profileInfos.map((profile) => profile.profileId),
@@ -76,6 +77,7 @@ export const profileStore = {
 		const baseProfile = isProfileInfo(profile) ? profile : createBasicProfileInfo(profile);
 		const updatedProfile: ProfileInfo = {
 			...baseProfile,
+			domainProfile: parseRequiredDomainProfile(baseProfile.domainProfile),
 			profileId: baseProfile.profileId || buildProfileId(baseProfile.sessionId, baseProfile.userId),
 			createdAt: baseProfile.createdAt || now,
 			updatedAt: now,

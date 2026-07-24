@@ -12,7 +12,13 @@ import {
 } from '../util/routeHelpers.js';
 import { ProfileInfo, ProfileMetadata } from '@rag-advisor-demo/shared/domain';
 import { buildProfileId } from '@rag-advisor-demo/shared/util';
-import { assertOwnedProfile, assertOwnedSession, assertSessionUser } from '../util/authUtils.js';
+import {
+	assertOwnedCharacter,
+	assertOwnedProfile,
+	assertOwnedSession,
+	assertSessionUser,
+} from '../util/authUtils.js';
+import { parseDomainProfileForCharacter } from '../util/domainValidationUtils.js';
 
 const router: Router = express.Router();
 router.use(verifySession());
@@ -111,9 +117,14 @@ router.post(
 		): Promise<void> => {
 			const requiredFields: (keyof ProfileMetadata)[] = ['name', 'sessionId', 'userId'];
 			validateRequestData(req.body, 'body', requiredFields);
-			await assertOwnedSession(req, req.body.sessionId);
+			const session = await assertOwnedSession(req, req.body.sessionId);
 			req.body.userId = assertSessionUser(req, req.body.userId);
 			req.body.profileId = buildProfileId(req.body.sessionId, req.body.userId);
+			const character = await assertOwnedCharacter(req, session.characterId);
+			req.body.domainProfile = parseDomainProfileForCharacter(
+				req.body.domainProfile,
+				character.domain
+			);
 
 			const response = await profileStore.storeProfile(req.body);
 			res.status(201).json(response);
