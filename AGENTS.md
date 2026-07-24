@@ -24,6 +24,9 @@ Use `pnpm`, never npm or yarn.
 - Treat migrations and seed commands as operationally sensitive.
 - Every seed/import command must default to a no-write dry run.
 - Use `pnpm preflight:finance` for the local, no-write finance fixture checkpoint.
+- Use `pnpm seed:finance` for the database-aware no-write fixture checkpoint and pass `-- --apply`
+  only after reviewing its report. If multiple local users exist, select the intended owner with
+  `--owner-user-id=<id>`; never persist that runtime identifier in repository fixtures.
 - Use `pnpm db:check` for credential-safe, read-only database verification.
 - Do not write to Neon or call embedding/LLM APIs until the dry-run report has been reviewed.
 - Prefer incremental, resumable embedding operations.
