@@ -1,0 +1,323 @@
+// src/client/component/page/chat/TempTurnDisplay.tsx
+
+import CancelIcon from '@mui/icons-material/Cancel';
+import EditIcon from '@mui/icons-material/Edit';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import ReplayIcon from '@mui/icons-material/Replay';
+import SaveIcon from '@mui/icons-material/Save';
+import { Avatar, Box, Divider, IconButton, TextField, Typography, useTheme } from '@mui/material';
+import { FC, useEffect, useState } from 'react';
+import { GlassCircularProgress, GlassBox } from '../../layout/component/glass/index.js';
+import { getLangText } from '../../util/translateUtils.js';
+import { parseEntriesToText } from '../../util/chatParseUtils.js';
+import {
+	LANG_KEYS,
+	REQUEST_CHARACTER_LIMIT,
+	RESPONSE_EDIT_CHARACTER_LIMIT,
+} from '@rag-advisor-demo/shared/config';
+import { TempChatTurn, ChatMessageSet } from '@rag-advisor-demo/shared/domain';
+import { ConversationEntry } from './ConversationEntry.js';
+import type { ChatDisplayMode } from './chatDisplayMode.js';
+import type { PortraitUrlMap } from '@rag-advisor-demo/shared/config';
+import { getConversationAvatar } from './conversationAvatarUtils.js';
+
+/**
+ * Props for the TempTurnDisplay component.
+ */
+interface TempTurnDisplayProps {
+	tempTurn: TempChatTurn;
+	currentTempSetNo: number;
+	isProcessing: boolean;
+	userEditInput: string;
+	botEditInput: string;
+	onEditTempTurnText: (value: string, isRequest: boolean) => void;
+	onSaveTempTurnText: () => void;
+	onRegenerate: () => void;
+	changeTempSetNo: (index: number) => void;
+	displayMode: ChatDisplayMode;
+	characterPortraitUrls?: PortraitUrlMap;
+	characterAvatarUrls?: PortraitUrlMap;
+}
+
+/**
+ * A component for displaying a temporary chat turn with inline editing capabilities.
+ * It now uses dynamic labels and a background color change to indicate text overflow.
+ */
+export const TempTurnDisplay: FC<TempTurnDisplayProps> = ({
+	tempTurn,
+	currentTempSetNo,
+	isProcessing,
+	userEditInput,
+	botEditInput,
+	onEditTempTurnText,
+	onSaveTempTurnText,
+	onRegenerate,
+	changeTempSetNo,
+	displayMode,
+	characterPortraitUrls,
+	characterAvatarUrls,
+}) => {
+	const theme = useTheme();
+	const [isEditing, setIsEditing] = useState(false);
+	const currentSet: ChatMessageSet | undefined = tempTurn?.chatTurnSets?.[currentTempSetNo];
+
+	useEffect(() => {
+		setIsEditing(false);
+	}, [currentTempSetNo]);
+
+	if (!currentSet) return null;
+
+	const handleStartEdit = () => {
+		if (!currentSet) return;
+		onEditTempTurnText(parseEntriesToText(currentSet.request.entries), true);
+		onEditTempTurnText(parseEntriesToText(currentSet.response.entries), false);
+		setIsEditing(true);
+	};
+
+	const handleCancelEdit = () => setIsEditing(false);
+	const handleSaveAndExitEdit = () => {
+		onSaveTempTurnText();
+		setIsEditing(false);
+	};
+	const handlePrevSet = () => changeTempSetNo(currentTempSetNo - 1);
+	const handleNextSet = () => changeTempSetNo(currentTempSetNo + 1);
+
+	const isUserTextOverflow = userEditInput.length > REQUEST_CHARACTER_LIMIT;
+	const isBotTextOverflow = botEditInput.length > RESPONSE_EDIT_CHARACTER_LIMIT;
+	const isConversationMode = displayMode === 'conversation';
+	const avatarUrl = currentSet.response
+		? getConversationAvatar(characterAvatarUrls, characterPortraitUrls, currentSet.response.emotion)
+		: undefined;
+
+	return (
+		<Box
+			className={'turnContainer'}
+			sx={{
+				position: 'relative',
+				paddingTop: theme.spacing(4.5),
+				'& .hover-buttons': {
+					opacity: isEditing ? 1 : 0,
+					visibility: isEditing ? 'visible' : 'hidden',
+					transition: 'opacity 0.2s, visibility 0.2s',
+					'@media (hover: none)': { opacity: 1, visibility: 'visible' },
+				},
+				...(!isEditing && { '&:hover': { '& .hover-buttons': { opacity: 1, visibility: 'visible' } } }),
+			}}
+		>
+			{isEditing ? (
+				<GlassBox gap={2}>
+					<TextField
+						fullWidth
+						multiline
+						label={currentSet.request.showName}
+						variant="outlined"
+						value={userEditInput}
+						onChange={(e) => onEditTempTurnText(e.target.value, true)}
+						disabled={isProcessing}
+						slotProps={{
+							htmlInput: { maxLength: REQUEST_CHARACTER_LIMIT },
+							input: { sx: { fontSize: theme.typography.body2.fontSize } },
+						}}
+						error={isUserTextOverflow} // Use the built-in error prop
+						sx={{ mb: 3 }}
+					/>
+					<TextField
+						fullWidth
+						multiline
+						label={currentSet.response.showName}
+						variant="outlined"
+						value={botEditInput}
+						onChange={(e) => onEditTempTurnText(e.target.value, false)}
+						disabled={isProcessing}
+						slotProps={{
+							htmlInput: { maxLength: RESPONSE_EDIT_CHARACTER_LIMIT },
+							input: { sx: { fontSize: theme.typography.body2.fontSize } },
+						}}
+						error={isBotTextOverflow}
+					/>
+				</GlassBox>
+			) : (
+				<>
+					<Box sx={{ mb: 1 }}>
+						{isConversationMode ? (
+							<Typography variant="caption" color="text.secondary">
+								{currentSet.request.showName}
+							</Typography>
+						) : null}
+						{currentSet.request.entries.map((entry, idx) => (
+							<Box key={`req-${idx}`} sx={{ mt: isConversationMode ? 0.5 : 0 }}>
+								<ConversationEntry entry={entry} role="user" />
+							</Box>
+						))}
+					</Box>
+					<Box
+						sx={{
+							mt: isConversationMode ? 2 : 0,
+							display: isConversationMode ? 'flex' : 'block',
+							alignItems: 'flex-start',
+							gap: 1.5,
+						}}
+					>
+						{isConversationMode && currentSet.response ? (
+							<Avatar
+								src={avatarUrl}
+								alt={currentSet.response.showName}
+								sx={{ width: 44, height: 44, flexShrink: 0 }}
+							/>
+						) : null}
+						<Box sx={{ minWidth: 0, flex: 1 }}>
+							{currentSet.response ? (
+								<>
+									{isConversationMode ? (
+										<Typography variant="caption" color="secondary">
+											{currentSet.response.showName}
+										</Typography>
+									) : null}
+									{currentSet.response.entries.map((entry, idx) => (
+										<Box key={`res-${idx}`} sx={{ mt: isConversationMode ? 0.5 : 0 }}>
+											<ConversationEntry entry={entry} role="assistant" />
+										</Box>
+									))}
+								</>
+							) : (
+								<Typography sx={{ fontStyle: 'italic', color: 'gray' }}>
+									<GlassCircularProgress size={12} sx={{ mr: 1 }} /> {getLangText(LANG_KEYS.GEN_RESPONSE)}
+								</Typography>
+							)}
+						</Box>
+					</Box>
+				</>
+			)}
+			{isConversationMode && !isEditing ? <Divider sx={{ mt: 2 }} /> : null}
+
+			<Box
+				className="hover-buttons"
+				sx={{
+					position: 'absolute',
+					top: 4,
+					right: 4,
+					display: 'flex',
+					alignItems: 'center',
+					gap: '2px',
+					p: '1px',
+					borderRadius: '6px',
+					backgroundColor: 'rgba(255, 255, 255, 0.1)',
+					backdropFilter: 'blur(4px)',
+					border: '1px solid rgba(255, 255, 255, 0.1)',
+					boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+				}}
+			>
+				{isEditing ? (
+					<>
+						<IconButton
+							size="small"
+							onClick={handleCancelEdit}
+							disabled={isProcessing}
+							title={getLangText(LANG_KEYS.CANCEL_EDIT)}
+						>
+							<CancelIcon sx={{ fontSize: '14px' }} />
+						</IconButton>
+						<IconButton
+							size="small"
+							onClick={handleSaveAndExitEdit}
+							disabled={
+								isProcessing ||
+								!userEditInput.trim() ||
+								!botEditInput.trim() ||
+								isUserTextOverflow ||
+								isBotTextOverflow
+							}
+							title={getLangText(LANG_KEYS.SAVE_CHANGES)}
+							color="secondary"
+						>
+							<SaveIcon sx={{ fontSize: '14px' }} />
+						</IconButton>
+					</>
+				) : (
+					<>
+						{tempTurn.chatTurnSets.length > 1 && (
+							<>
+								<IconButton
+									size="small"
+									title={getLangText(LANG_KEYS.PREVIOUS_RESPONSE)}
+									onClick={handlePrevSet}
+									disabled={currentTempSetNo === 0}
+									sx={{
+										transition: 'color 0.2s ease-in-out',
+										'&:hover': {
+											color: theme.palette.warning.light, // Green
+										},
+									}}
+								>
+									<NavigateBeforeIcon sx={{ fontSize: '14px' }} />
+								</IconButton>
+								<Typography
+									variant="caption"
+									sx={{
+										px: 0.5,
+										fontSize: '11px',
+										fontWeight: 500,
+										color: 'rgba(255, 255, 255, 0.8)',
+										userSelect: 'none',
+									}}
+								>
+									{currentTempSetNo + 1}/{tempTurn.chatTurnSets.length}
+								</Typography>
+								<IconButton
+									size="small"
+									title={getLangText(LANG_KEYS.NEXT_RESPONSE)}
+									onClick={handleNextSet}
+									disabled={currentTempSetNo === tempTurn.chatTurnSets.length - 1}
+									sx={{
+										transition: 'color 0.2s ease-in-out',
+										'&:hover': {
+											color: theme.palette.warning.light, // Green
+										},
+									}}
+								>
+									<NavigateNextIcon sx={{ fontSize: '14px' }} />
+								</IconButton>
+							</>
+						)}
+						{currentSet.response && (
+							<>
+								{/* ✅ EDIT ICON - Turns blue on hover */}
+								<IconButton
+									size="small"
+									onClick={handleStartEdit}
+									disabled={isProcessing}
+									title={getLangText(LANG_KEYS.EDIT_THIS_TURN)}
+									sx={{
+										transition: 'color 0.2s ease-in-out',
+										'&:hover': {
+											color: theme.palette.primary.dark, // Blue
+										},
+									}}
+								>
+									<EditIcon sx={{ fontSize: '14px' }} />
+								</IconButton>
+
+								{/* ✅ REGENERATE ICON - Turns green on hover */}
+								<IconButton
+									size="small"
+									onClick={onRegenerate}
+									disabled={isProcessing}
+									title={getLangText(LANG_KEYS.REGENERATE_RESPONSE)}
+									sx={{
+										transition: 'color 0.2s ease-in-out',
+										'&:hover': {
+											color: theme.palette.success.main, // Green
+										},
+									}}
+								>
+									<ReplayIcon sx={{ fontSize: '14px' }} />
+								</IconButton>
+							</>
+						)}
+					</>
+				)}
+			</Box>
+		</Box>
+	);
+};

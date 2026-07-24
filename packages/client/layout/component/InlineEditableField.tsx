@@ -1,0 +1,161 @@
+import React, { useState, useEffect, FC, useRef } from 'react';
+import { TextField, Typography, IconButton, Box, TypographyProps, Tooltip } from '@mui/material';
+import CheckIcon from '@mui/icons-material/Check';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import { LANG_KEYS } from '@rag-advisor-demo/shared/config';
+import { getLangText } from '../../util/translateUtils.js';
+import { HeaderIconButton } from './HeaderIconButton.js';
+
+interface InlineEditableFieldProps {
+	initialValue: string;
+	onSave: (newValue: string) => void;
+	onCancel?: () => void;
+	onTextClick?: () => void;
+	showEditButton?: boolean;
+	disabled?: boolean;
+	typographyProps?: TypographyProps;
+	textFieldProps?: {
+		variant?: 'standard' | 'outlined' | 'filled';
+		size?: 'small' | 'medium';
+		multiline?: boolean;
+		maxRows?: number;
+	};
+}
+
+export const InlineEditableField: FC<InlineEditableFieldProps> = ({
+	initialValue,
+	onSave,
+	onCancel,
+	onTextClick,
+	showEditButton = false,
+	disabled = false,
+	typographyProps,
+	textFieldProps = { variant: 'standard', size: 'small' },
+}) => {
+	const [isEditing, setIsEditing] = useState(false);
+	const [value, setValue] = useState(initialValue);
+	const containerRef = useRef<HTMLDivElement>(null);
+
+	// Sync with external changes
+	useEffect(() => {
+		setValue(initialValue);
+	}, [initialValue]);
+
+	// Handle clicking outside to cancel
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+				handleCancel();
+			}
+		};
+		if (isEditing) {
+			document.addEventListener('mousedown', handleClickOutside);
+		}
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [isEditing, initialValue]);
+
+	const handleSave = () => {
+		const trimmedValue = value.trim();
+		if (trimmedValue && trimmedValue !== initialValue) {
+			onSave(trimmedValue);
+		}
+		setIsEditing(false);
+	};
+
+	const handleCancel = () => {
+		setValue(initialValue);
+		setIsEditing(false);
+		onCancel?.();
+	};
+
+	const handleKeyDown = (event: React.KeyboardEvent) => {
+		if (event.key === 'Enter' && !textFieldProps.multiline) {
+			event.preventDefault();
+			handleSave();
+		} else if (event.key === 'Escape') {
+			handleCancel();
+		}
+	};
+
+	const handleTextClick = () => {
+		if (onTextClick) {
+			onTextClick();
+			return;
+		}
+		setIsEditing(true);
+	};
+
+	const handleTextKeyDown = (event: React.KeyboardEvent) => {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			handleTextClick();
+		}
+	};
+
+	if (disabled) {
+		return (
+			<Typography {...typographyProps} color="text.secondary" noWrap>
+				{initialValue}
+			</Typography>
+		);
+	}
+
+	if (isEditing) {
+		return (
+			<Box ref={containerRef} sx={{ display: 'flex', alignItems: 'center' }}>
+				<TextField
+					value={value}
+					onChange={(e) => setValue(e.target.value)}
+					onKeyDown={handleKeyDown}
+					autoFocus
+					{...textFieldProps}
+					sx={typographyProps}
+				/>
+				<HeaderIconButton
+					onClick={handleSave}
+					size="small"
+					aria-label={getLangText(LANG_KEYS.SAVE_CHANGES)}
+				>
+					<CheckIcon sx={{ fontSize: 14 }} />
+				</HeaderIconButton>
+			</Box>
+		);
+	}
+
+	return (
+		<Box
+			sx={{
+				display: 'flex',
+				alignItems: 'center',
+				gap: 0.25,
+				minWidth: 0,
+				'& > .MuiTypography-root': { cursor: 'pointer' },
+			}}
+		>
+			<Typography
+				{...typographyProps}
+				noWrap
+				role="button"
+				tabIndex={0}
+				onClick={handleTextClick}
+				onKeyDown={handleTextKeyDown}
+			>
+				{value}
+			</Typography>
+			{showEditButton && (
+				<Tooltip title={getLangText(LANG_KEYS.EDIT)}>
+					<HeaderIconButton
+						size="small"
+						onClick={() => setIsEditing(true)}
+						aria-label={getLangText(LANG_KEYS.EDIT)}
+						sx={{ p: 0.25, flexShrink: 0 }}
+					>
+						<EditOutlinedIcon sx={{ fontSize: 14 }} />
+					</HeaderIconButton>
+				</Tooltip>
+			)}
+		</Box>
+	);
+};

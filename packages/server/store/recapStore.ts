@@ -1,0 +1,133 @@
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import { Metadata } from '@rag-advisor-demo/shared/api';
+import { METADATA_TYPES } from '@rag-advisor-demo/shared/config';
+import { RecapInfo } from '@rag-advisor-demo/shared/domain';
+import { recapToMetadata } from '@rag-advisor-demo/shared/util';
+import { getDatabase } from '../db/postgresClient.js';
+import { recaps } from '../db/schema.js';
+import {
+	QueryEmbeddingCache,
+	searchMemoryEmbeddings,
+	searchMemoryEmbeddingsByKeywords,
+} from '../service/embeddingService.js';
+import { embeddingJobService } from '../service/embeddingJobService.js';
+import { recapToDocument } from '../util/documentUtils.js';
+import { RagTraceContext } from '../util/ragTraceUtils.js';
+import { FilterCriteria } from '../util/schemaUtils.js';
+
+type RecapType = typeof METADATA_TYPES.RECAP | typeof METADATA_TYPES.RELATIONSHIP;
+
+export const recapStore = {
+	async storeRecap(recapInfo: RecapInfo): Promise<{ recapId: string }> {
+		if (!recapInfo.content?.trim()) return { recapId: '' };
+		const now = new Date().toISOString();
+		await getDatabase()
+			.insert(recaps)
+			.values({
+				recapId: recapInfo.recapId,
+				sessionId: recapInfo.sessionId,
+				characterId: recapInfo.characterId,
+				userId: recapInfo.userId,
+				recapType: recapInfo.type,
+				turnStart: recapInfo.turnStart,
+				turnEnd: recapInfo.turnEnd,
+				data: recapInfo,
+				createdAt: recapInfo.createdAt || now,
+				updatedAt: recapInfo.updatedAt || now,
+			})
+			.onConflictDoUpdate({
+				target: recaps.recapId,
+				set: {
+					recapType: recapInfo.type,
+					turnStart: recapInfo.turnStart,
+					turnEnd: recapInfo.turnEnd,
+					data: recapInfo,
+					updatedAt: recapInfo.updatedAt || now,
+				},
+			});
+		embeddingJobService.enqueue({
+			sourceType: 'recap',
+			sourceId: recapInfo.recapId,
+			userId: recapInfo.userId,
+			characterId: recapInfo.characterId,
+			sessionId: recapInfo.sessionId,
+			content: recapToDocument(recapInfo),
+			metadata: recapToMetadata(recapInfo) as unknown as Metadata,
+		});
+		return { recapId: recapInfo.recapId };
+	},
+
+	async getRecapsBySessionId(sessionId: string, type: RecapType): Promise<RecapInfo[]> {
+		const rows = await getDatabase()
+			.select({ data: recaps.data })
+			.from(recaps)
+			.where(and(eq(recaps.sessionId, sessionId), eq(recaps.recapType, type)))
+			.orderBy(asc(recaps.turnStart));
+		return rows.map((row) => row.data);
+	},
+
+	async queryRecaps(
+		sessionId: string,
+		queryTexts: string[],
+		type: RecapType,
+		filterCriteria?: FilterCriteria,
+		_whereDocument?: unknown,
+		limit = 10,
+		queryEmbeddingCache?: QueryEmbeddingCache,
+		ragTraceContext?: RagTraceContext
+	): Promise<RecapInfo[]> {
+		const all = await recapStore.getRecapsBySessionId(sessionId, type);
+		const requested = [
+			...(filterCriteria?.keywords ?? []),
+			...(filterCriteria?.topics ?? []),
+			filterCriteria?.emotion,
+		]
+			.filter(Boolean)
+			.map((value) => String(value).toLowerCase());
+		const candidates = requested.length
+			? all.filter((item) =>
+					requested.some((value) => (item.flagList ?? []).some((flag) => flag.toLowerCase() === value))
+				)
+			: all;
+		if (!candidates.length) return [];
+		const results = await searchMemoryEmbeddings(
+			queryTexts,
+			{ sourceType: 'recap', sessionId, sourceIds: candidates.map((item) => item.recapId) },
+			limit,
+			queryEmbeddingCache,
+			ragTraceContext
+		);
+		const byId = new Map(candidates.map((item) => [item.recapId, item]));
+		return results.map((result) => byId.get(result.sourceId)).filter(Boolean) as RecapInfo[];
+	},
+
+	async queryRecapsByKeywords(
+		sessionId: string,
+		keywords: string[],
+		type: RecapType,
+		excludeIds: string[] = [],
+		limit = 100
+	): Promise<RecapInfo[]> {
+		const embeddingRows = await searchMemoryEmbeddingsByKeywords(
+			keywords,
+			{ sourceType: 'recap', sessionId },
+			{ excludeSourceIds: excludeIds, limit }
+		);
+		const sourceIds = embeddingRows.map((row) => row.sourceId);
+		if (!sourceIds.length) return [];
+
+		const rows = await getDatabase()
+			.select({ data: recaps.data })
+			.from(recaps)
+			.where(
+				and(
+					eq(recaps.sessionId, sessionId),
+					eq(recaps.recapType, type),
+					inArray(recaps.recapId, sourceIds)
+				)
+			)
+			.limit(sourceIds.length);
+		const byId = new Map(rows.map((row) => [row.data.recapId, row.data]));
+		return sourceIds.map((sourceId) => byId.get(sourceId)).filter(Boolean) as RecapInfo[];
+	},
+};
