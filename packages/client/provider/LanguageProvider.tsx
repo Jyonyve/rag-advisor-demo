@@ -9,8 +9,8 @@ import React, {
 	useEffect,
 } from 'react';
 import { LangCode, DEFAULT_LANG } from '@rag-advisor-demo/shared/config';
-import { fetchWithTimeout } from '../util/fetchUtils.js';
 import { setCurrentLang } from '../util/translateUtils.js';
+import { detectBrowserLanguage } from './languageDetection.js';
 
 interface LanguageContextType {
 	lang: LangCode;
@@ -22,60 +22,6 @@ interface LanguageProviderProps {
 	initialLang?: LangCode;
 }
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
-
-// Korean-priority detection function
-const detectLanguageWithKoreanPriority = async (): Promise<LangCode> => {
-	// Get browser language
-	const browserLang = typeof window !== 'undefined' ? navigator.language || '' : '';
-
-	// Priority 1: If browser language is Korean (ko-KR, ko, etc.)
-	if (browserLang.toLowerCase().startsWith('ko')) {
-		return 'kor';
-	}
-
-	// Priority 2: Check if user is located in Korea
-	try {
-		const countryCode = await getUserCountry();
-		if (countryCode === 'KR') {
-			return 'kor'; // Korean in Korea with English browser → Korean app
-		}
-	} catch (error) {
-		console.warn('Failed to detect location:', error);
-	}
-
-	// Priority 3: All other cases use default language
-	return DEFAULT_LANG; // 'eng' or whatever your default is
-};
-// Correct implementation with AbortController
-const getUserCountry = async (): Promise<string | null> => {
-	try {
-		const response = await fetchWithTimeout('https://ipapi.co/country_code/', {}, 3000);
-
-		if (response.ok) {
-			const countryCode = await response.text();
-			return countryCode.trim().toUpperCase();
-		}
-
-		throw new Error('IP service failed');
-	} catch (error) {
-		if (error instanceof Error) {
-			if (error.name === 'AbortError') {
-				console.warn('Request timed out after 3 seconds');
-			}
-
-			// Fallback service
-			try {
-				const response = await fetchWithTimeout('https://ipinfo.io/country', {}, 3000);
-				const countryCode = await response.text();
-				return countryCode.trim().toUpperCase();
-			} catch (fallbackError) {
-				console.warn('All country detection services failed');
-			}
-		}
-		console.warn('Unknown error:', error);
-		return null;
-	}
-};
 
 export const LanguageProvider: FC<LanguageProviderProps> = ({ children, initialLang }) => {
 	// 🎯 USE SERVER-DETECTED LANGUAGE AS INITIAL STATE
@@ -100,13 +46,8 @@ export const LanguageProvider: FC<LanguageProviderProps> = ({ children, initialL
 
 	// Background enhancement only if no server detection
 	useEffect(() => {
-		if (!initialLang) {
-			detectLanguageWithKoreanPriority().then((detectedLang) => {
-				const hasUserPreference = localStorage.getItem('user-preferred-language');
-				if (!hasUserPreference) {
-					setLang(detectedLang);
-				}
-			});
+		if (!initialLang && !localStorage.getItem('user-preferred-language')) {
+			setLang(detectBrowserLanguage(navigator.languages, navigator.language));
 		}
 	}, [initialLang]);
 

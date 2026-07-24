@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite --port 3000 --mode development",
-		"test": "tsx --test util/conversationMarkupUtils.test.ts page/chat/ConversationEntry.test.tsx page/chat/chatDisplayMode.test.ts page/chat/conversationAvatarUtils.test.ts page/character/characterImageCrop.test.ts page/document/documentDiffUtils.test.ts",
+		"test": "tsx --test util/conversationMarkupUtils.test.ts page/chat/ConversationEntry.test.tsx page/chat/chatDisplayMode.test.ts page/chat/conversationAvatarUtils.test.ts page/character/characterImageCrop.test.ts page/document/documentDiffUtils.test.ts provider/languageDetection.test.ts",
 		"build": "vite build && pnpm build:ssr",
 		"build:static": "vite build --mode static --outDir ../../dist/static",
 		"build:ssr": "vite build --ssr entry-server.tsx --outDir ./dist/ssr",
