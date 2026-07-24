@@ -16,6 +16,7 @@
 		"test": "pnpm test:server && pnpm test:client",
 		"test:server": "pnpm --filter @rag-advisor-demo/server test",
 		"test:client": "pnpm --filter @rag-advisor-demo/client test",
+		"preflight:finance": "pnpm --filter @rag-advisor-demo/server fixture:preflight:finance",
 		"db:generate": "pnpm --filter @rag-advisor-demo/server db:generate",
 		"db:migrate": "pnpm --filter @rag-advisor-demo/server db:migrate",
 		"db:studio": "pnpm --filter @rag-advisor-demo/server db:studio",

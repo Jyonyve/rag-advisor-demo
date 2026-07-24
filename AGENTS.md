@@ -23,6 +23,7 @@ Use `pnpm`, never npm or yarn.
 - PostgreSQL is hosted on Neon in deployed environments.
 - Treat migrations and seed commands as operationally sensitive.
 - Every seed/import command must default to a no-write dry run.
+- Use `pnpm preflight:finance` for the local, no-write finance fixture checkpoint.
 - Do not write to Neon or call embedding/LLM APIs until the dry-run report has been reviewed.
 - Prefer incremental, resumable embedding operations.
 - Keep provider-specific behavior behind the server LLM/embedding service.

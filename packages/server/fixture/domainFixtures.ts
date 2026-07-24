@@ -9,17 +9,12 @@ import {
 } from '@rag-advisor-demo/shared/domain';
 import { buildSessionId, parseSessionId } from '@rag-advisor-demo/shared/util';
 
-export const DEMO_FIXTURE_DATA_VERSION = '2026-07-24.1';
+import { deepFreeze, DEMO_FIXTURE_DATA_VERSION } from './fixtureUtils.js';
+import { FINANCE_CATALOG_FIXTURES } from './financeFixtures.js';
+
+export { DEMO_FIXTURE_DATA_VERSION };
 export const DEMO_FIXTURE_OWNER_ID = 'demo-fixture-user';
 const FIXTURE_TIMESTAMP = '2026-07-24T00:00:00.000Z';
-
-const deepFreeze = <T>(value: T): T => {
-	if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-		Object.values(value).forEach((nestedValue) => deepFreeze(nestedValue));
-		Object.freeze(value);
-	}
-	return value;
-};
 
 export type DemoCharacterFixture = {
 	fixtureId: string;
@@ -139,6 +134,8 @@ export const DEMO_LORE_FIXTURES = deepFreeze([
 
 export type FixtureValidationIssueCode =
 	| 'DUPLICATE_CHARACTER_ID'
+	| 'DUPLICATE_LORE_ID'
+	| 'DUPLICATE_FIXTURE_ID'
 	| 'INVALID_CHARACTER_ID'
 	| 'UNSUPPORTED_DOMAIN'
 	| 'MISSING_FIXTURE_ID'
@@ -210,6 +207,8 @@ export const validateDomainFixtures = ({
 	const issues: FixtureValidationIssue[] = [];
 	const characterIds = new Set<string>();
 	const characterDomains = new Map<string, AssistantDomain>();
+	const fixtureIds = new Set<string>();
+	const loreIds = new Set<string>();
 
 	for (const fixture of characters) {
 		const { character } = fixture;
@@ -220,6 +219,15 @@ export const validateDomainFixtures = ({
 				character.characterId,
 				'Character fixture identity is required.'
 			);
+		} else if (fixtureIds.has(fixture.fixtureId)) {
+			addIssue(
+				issues,
+				'DUPLICATE_FIXTURE_ID',
+				fixture.fixtureId,
+				`Fixture ID '${fixture.fixtureId}' is duplicated.`
+			);
+		} else {
+			fixtureIds.add(fixture.fixtureId);
 		}
 		if (characterIds.has(character.characterId)) {
 			addIssue(
@@ -284,6 +292,20 @@ export const validateDomainFixtures = ({
 		const fixtureId = lore.fixtureId || lore.loreId;
 		if (!lore.fixtureId?.trim()) {
 			addIssue(issues, 'MISSING_FIXTURE_ID', lore.loreId, 'Lore fixture identity is required.');
+		} else if (fixtureIds.has(lore.fixtureId)) {
+			addIssue(
+				issues,
+				'DUPLICATE_FIXTURE_ID',
+				lore.fixtureId,
+				`Fixture ID '${lore.fixtureId}' is duplicated.`
+			);
+		} else {
+			fixtureIds.add(lore.fixtureId);
+		}
+		if (loreIds.has(lore.loreId)) {
+			addIssue(issues, 'DUPLICATE_LORE_ID', fixtureId, `Lore ID '${lore.loreId}' is duplicated.`);
+		} else {
+			loreIds.add(lore.loreId);
 		}
 		if (!lore.content.trim()) {
 			addIssue(
@@ -378,4 +400,7 @@ export const validateDomainFixtures = ({
 };
 
 export const validateBuiltInDomainFixtures = (): FixtureValidationReport =>
-	validateDomainFixtures({ characters: DEMO_CHARACTER_FIXTURES, lores: DEMO_LORE_FIXTURES });
+	validateDomainFixtures({
+		characters: DEMO_CHARACTER_FIXTURES,
+		lores: [...DEMO_LORE_FIXTURES, ...FINANCE_CATALOG_FIXTURES.map(({ lore }) => lore)],
+	});

@@ -47,8 +47,8 @@ test('built-in domain fixtures are deterministic and valid without providers or 
 	assert.deepEqual(report, {
 		valid: true,
 		characterCount: 2,
-		loreCount: 2,
-		expectedEmbeddingCalls: 2,
+		loreCount: 8,
+		expectedEmbeddingCalls: 8,
 		issues: [],
 	});
 });
@@ -161,6 +161,14 @@ test('official Lore metadata is strict and matches server-loaded Character domai
 });
 
 test('Lore validation rejects unknown Characters and cross-domain associations', () => {
+	const duplicateLoreId = cloneLore();
+	duplicateLoreId[1].loreId = duplicateLoreId[0].loreId;
+	assert.ok(issueCodes({ lores: duplicateLoreId }).includes('DUPLICATE_LORE_ID'));
+
+	const duplicateFixtureId = cloneLore();
+	duplicateFixtureId[1].fixtureId = duplicateFixtureId[0].fixtureId;
+	assert.ok(issueCodes({ lores: duplicateFixtureId }).includes('DUPLICATE_FIXTURE_ID'));
+
 	const unknownCharacter = cloneLore();
 	unknownCharacter[0].characterIds = ['missing-character_demo'];
 	assert.ok(issueCodes({ lores: unknownCharacter }).includes('UNKNOWN_CHARACTER_REFERENCE'));

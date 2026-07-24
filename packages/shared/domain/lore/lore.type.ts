@@ -10,8 +10,41 @@ export const financeLoreStructuredMetadataSchema = z
 		knowledgeType: z.enum(['product', 'disclosure', 'education']),
 		riskLevel: z.enum(['low', 'medium', 'high']).optional(),
 		minimumHorizonMonths: z.number().int().nonnegative().optional(),
+		liquidityLevel: z.enum(['low', 'medium', 'high']).optional(),
+		productCode: z.string().trim().min(1).optional(),
+		productFixtureId: z.string().trim().min(1).optional(),
+		disclosureCode: z.string().trim().min(1).optional(),
 	})
-	.strict();
+	.strict()
+	.superRefine((metadata, context) => {
+		if (metadata.knowledgeType === 'product') {
+			for (const field of [
+				'riskLevel',
+				'minimumHorizonMonths',
+				'liquidityLevel',
+				'productCode',
+			] as const) {
+				if (metadata[field] === undefined) {
+					context.addIssue({
+						code: 'custom',
+						path: [field],
+						message: `Finance product metadata requires ${field}.`,
+					});
+				}
+			}
+		}
+		if (metadata.knowledgeType === 'disclosure') {
+			for (const field of ['productFixtureId', 'disclosureCode'] as const) {
+				if (metadata[field] === undefined) {
+					context.addIssue({
+						code: 'custom',
+						path: [field],
+						message: `Finance disclosure metadata requires ${field}.`,
+					});
+				}
+			}
+		}
+	});
 
 export const healthcareOperationsLoreStructuredMetadataSchema = z
 	.object({
