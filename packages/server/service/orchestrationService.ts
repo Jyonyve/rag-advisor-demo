@@ -28,6 +28,7 @@ import {
 import { handleServiceError } from '../util/serviceHelpers.js';
 import { memoryEngine } from './memoryEngine.js';
 import { personaEngine } from './personaEngine.js';
+import { resolveRagContext } from './ragContextService.js';
 
 export interface ReceiveBotResponseOptions {
 	adultContentEnabled?: boolean;
@@ -241,40 +242,48 @@ async function _generateAndAppendResponse(
 		relationshipRecapSummary: '',
 	};
 
-	if (recentChatTurn && recentChatTurn.length > 0) {
-		options.onStatus?.('retrieving');
-		options.logger?.checkpoint('memoryRecall.start', { recentTurnCount: recentChatTurn.length });
-		try {
-			// Overwrite the default memories with the actual recalled data.
-			recalledMemories = await memoryEngine.recallRelevantMemories(
-				tempTurn.sessionId,
-				userConversation,
-				tempTurn.userId,
-				recentChatTurn,
-				langCode
-			);
-			options.logger?.checkpoint('memoryRecall.complete', {
-				shortTermCount: recalledMemories.shortTermHistory.length,
-				longTermCount: recalledMemories.longTermHistory.length,
-				loreCount: recalledMemories.relevantLore.length,
-				historyCount: recalledMemories.relevantHistory.length,
-				hasFactualRecap: Boolean(recalledMemories.factualRecapSummary),
-				hasRelationshipRecap: Boolean(recalledMemories.relationshipRecapSummary),
-			});
-		} catch (error: any) {
-			// If recall fails with a 404, we log it and proceed.
-			// The `recalledMemories` object will correctly keep its default empty state.
-			if (error instanceof ApiError && error.status === 404) {
-				options.logger?.warn('memoryRecall.empty', { status: 404 });
-			} else {
-				// For any other unexpected error, we re-throw to be handled by the caller.
-				throw error;
+	options.onStatus?.('retrieving');
+	options.logger?.checkpoint('memoryRecall.start', { recentTurnCount: recentChatTurn.length });
+	try {
+		recalledMemories = await memoryEngine.recallRelevantMemories(
+			tempTurn.sessionId,
+			userConversation,
+			tempTurn.userId,
+			recentChatTurn,
+			langCode,
+			{
+				userShowName: profileInfo.showName,
+				characterShowName: characterInfo.showName,
+				turnId: tempTurn.tempTurnId,
+				sequence: tempTurn.sequence,
 			}
+		);
+		options.logger?.checkpoint('memoryRecall.complete', {
+			shortTermCount: recalledMemories.shortTermHistory.length,
+			longTermCount: recalledMemories.longTermHistory.length,
+			loreCount: recalledMemories.relevantLore.length,
+			historyCount: recalledMemories.relevantHistory.length,
+			hasFactualRecap: Boolean(recalledMemories.factualRecapSummary),
+			hasRelationshipRecap: Boolean(recalledMemories.relationshipRecapSummary),
+		});
+	} catch (error: any) {
+		if (error instanceof ApiError && error.status === 404) {
+			options.logger?.warn('memoryRecall.empty', { status: 404 });
+		} else {
+			throw error;
 		}
-	} else {
-		// If there is no history, log it and proceed with the default empty context.
-		options.logger?.checkpoint('memoryRecall.skipped', { reason: 'no_recent_chat_history' });
 	}
+
+	const resolvedRagContext = resolveRagContext({
+		sessionId: tempTurn.sessionId,
+		userId: tempTurn.userId,
+		currentMessage: userConversation,
+		character: characterInfo,
+		profile: profileInfo,
+		memories: recalledMemories,
+	});
+	recalledMemories = resolvedRagContext.memories;
+	tempTurn.ragEvidence = resolvedRagContext.evidence;
 
 	// 2. Generate the new persona response.
 	options.onStatus?.('generating');
@@ -283,7 +292,7 @@ async function _generateAndAppendResponse(
 		recalledMemories,
 		characterInfo,
 		profileInfo,
-		userConversation,
+		resolvedRagContext.currentMessage,
 		aiModelInfo,
 		{
 			signal: options.signal,

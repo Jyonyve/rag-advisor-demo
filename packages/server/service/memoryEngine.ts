@@ -33,6 +33,13 @@ import { createQueryEmbeddingCache } from './embeddingService.js';
 import { llmService } from './llmService.js';
 import { ragQueryService } from './ragQueryService.js';
 
+export interface MemoryRecallContext {
+	userShowName: string;
+	characterShowName: string;
+	turnId: string;
+	sequence: number;
+}
+
 export const memoryEngine = {
 	/**
 	 * Gathers all relevant context (memories) needed to generate a coherent, in-character response.
@@ -42,20 +49,26 @@ export const memoryEngine = {
 		userConversation: string,
 		userId: string,
 		recentChatTurns: ChatTurn[],
-		langCode: LangCode
+		langCode: LangCode,
+		context?: MemoryRecallContext
 	): Promise<MemoryResponse> {
 		const { characterId } = parseSessionId(sessionId);
 		const INITIAL_QUERY_LIMIT = 30;
 		const INITIAL_RECAP_QUERY_LIMIT = 20;
 		const FINAL_MEMORY_LIMIT = 5;
 		const MAX_CONTINUATION_TURNS = 4;
-		const { request, response } = recentChatTurns[0];
+		const anchorTurn = recentChatTurns[0];
+		const userShowName = anchorTurn?.request.showName ?? context?.userShowName;
+		const characterShowName = anchorTurn?.response.showName ?? context?.characterShowName;
+		if (!userShowName || !characterShowName) {
+			throw new Error('Memory recall requires user and Character display names.');
+		}
 		const ragTraceContext = createRagTraceContext({
 			sessionId,
 			userId,
 			characterId,
-			turnId: request.messageId,
-			sequence: request.sequence,
+			turnId: anchorTurn?.request.messageId ?? context?.turnId ?? `${sessionId}:retrieval`,
+			sequence: anchorTurn?.request.sequence ?? context?.sequence ?? 0,
 		});
 
 		try {
@@ -63,8 +76,8 @@ export const memoryEngine = {
 				userConversation,
 				sessionId,
 				userId,
-				request.showName,
-				response.showName
+				userShowName,
+				characterShowName
 			);
 			flowLogger.info('memoryEngine', 'queryTransformed', {
 				sessionId,
@@ -136,7 +149,7 @@ export const memoryEngine = {
 			const boostTerms = extractRetrievalBoostTerms(
 				userConversation,
 				criticalTerm,
-				[request.showName, response.showName],
+				[userShowName, characterShowName],
 				transformedQuery.termAliases
 			);
 			const semanticChatTurns = longTermChatRes.chatTurns || [];
