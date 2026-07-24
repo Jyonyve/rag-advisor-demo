@@ -28,6 +28,10 @@ export const domainSessionProfileSchema = z.discriminatedUnion('domain', [
 	healthcareOperationsSessionProfileSchema,
 ]);
 
+export type FinancialSessionProfile = z.infer<typeof financialSessionProfileSchema>;
+export type HealthcareOperationsSessionProfile = z.infer<
+	typeof healthcareOperationsSessionProfileSchema
+>;
 export type DomainSessionProfile = z.infer<typeof domainSessionProfileSchema>;
 
 export interface ProfileMetadata extends BeingMetadata {

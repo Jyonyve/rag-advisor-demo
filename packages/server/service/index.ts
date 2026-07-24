@@ -7,3 +7,5 @@ export * from './embeddingJobService.js';
 export * from './characterGlossaryJobService.js';
 export * from './personaEngine.js';
 export * from './ragQueryService.js';
+export * from './financeProductFilter.js';
+export * from './financeReportService.js';

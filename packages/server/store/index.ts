@@ -10,3 +10,4 @@ export * from './tempStore.js';
 export * from './sessionStore.js';
 export * from './credentialStore.js';
 export * from './documentStore.js';
+export * from './financeCatalogStore.js';

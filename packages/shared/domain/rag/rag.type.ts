@@ -14,10 +14,17 @@ export const RAG_EXCLUSION_REASONS = [
 	'domain_mismatch',
 	'missing_domain',
 	'not_retrieval_eligible',
+	'invalid_structured_metadata',
+	'horizon_mismatch',
+	'liquidity_mismatch',
+	'risk_mismatch',
 ] as const;
+
+export const RAG_STRUCTURED_FILTER_DECISIONS = ['eligible', 'excluded'] as const;
 
 export type RagEvidenceSourceKind = (typeof RAG_EVIDENCE_SOURCE_KINDS)[number];
 export type RagExclusionReason = (typeof RAG_EXCLUSION_REASONS)[number];
+export type RagStructuredFilterDecisionType = (typeof RAG_STRUCTURED_FILTER_DECISIONS)[number];
 
 export interface RagEvidenceItem {
 	sourceKind: RagEvidenceSourceKind;
@@ -44,6 +51,13 @@ export interface RagContextAssumption {
 	description: string;
 }
 
+export interface RagStructuredFilterDecision {
+	sourceId: string;
+	label: string;
+	decision: RagStructuredFilterDecisionType;
+	reasons: RagExclusionReason[];
+}
+
 export interface RagEvidenceDto {
 	domain: AssistantDomain;
 	characterId: string;
@@ -51,6 +65,7 @@ export interface RagEvidenceDto {
 	profileFieldsUsed: string[];
 	items: RagEvidenceItem[];
 	excluded: RagExcludedEvidenceSummary[];
+	structuredFilterDecisions: RagStructuredFilterDecision[];
 	missingInformation: RagMissingInformation[];
 	assumptions: RagContextAssumption[];
 }

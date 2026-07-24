@@ -14,6 +14,7 @@ import {
 	type RagExcludedEvidenceSummary,
 	type RagExclusionReason,
 	type RagMissingInformation,
+	type RagStructuredFilterDecision,
 } from '@rag-advisor-demo/shared/domain';
 import { parseSessionId } from '@rag-advisor-demo/shared/util';
 
@@ -21,6 +22,7 @@ import {
 	parseDomainProfileForCharacter,
 	parseRequiredAssistantDomain,
 } from '../util/domainValidationUtils.js';
+import { filterFinanceLore } from './financeProductFilter.js';
 
 export interface ResolveRagContextInput {
 	sessionId: string;
@@ -186,6 +188,9 @@ export const resolveRagContext = (input: ResolveRagContextInput): ResolvedRagCon
 	if (parsedSession.characterId !== input.character.characterId) {
 		throw new ApiError(400, 'Session Character does not match the selected Character.');
 	}
+	if (input.character.userId !== input.userId) {
+		throw new ApiError(403, 'Selected Character is not owned by the authenticated user.');
+	}
 	if (input.profile.userId !== input.userId || input.profile.sessionId !== input.sessionId) {
 		throw new ApiError(403, 'Session Profile ownership or scope does not match the request.');
 	}
@@ -203,7 +208,7 @@ export const resolveRagContext = (input: ResolveRagContextInput): ResolvedRagCon
 		input.sessionId,
 		exclusions
 	);
-	const relevantLore = filterLores(
+	let relevantLore = filterLores(
 		input.memories.relevantLore,
 		input.userId,
 		input.sessionId,
@@ -211,6 +216,20 @@ export const resolveRagContext = (input: ResolveRagContextInput): ResolvedRagCon
 		domain,
 		exclusions
 	);
+	let structuredFilterDecisions: RagStructuredFilterDecision[] = [];
+	let assumptions: RagEvidenceDto['assumptions'] = [];
+	if (sessionProfile.domain === 'finance') {
+		const financeFilter = filterFinanceLore(relevantLore, sessionProfile, input.currentMessage);
+		relevantLore = financeFilter.eligibleLore;
+		structuredFilterDecisions = financeFilter.decisions;
+		assumptions = financeFilter.assumptions;
+		for (const decision of financeFilter.decisions) {
+			if (decision.decision !== 'excluded') continue;
+			for (const reason of decision.reasons) {
+				addExclusion(exclusions, 'character_lore', reason);
+			}
+		}
+	}
 	const relevantDocuments = filterDocuments(
 		input.memories.relevantDocuments ?? [],
 		input.userId,
@@ -241,8 +260,9 @@ export const resolveRagContext = (input: ResolveRagContextInput): ResolvedRagCon
 			profileFieldsUsed: profileContext.fieldsUsed,
 			items: buildEvidenceItems(domain, longTermHistory, relevantLore, relevantDocuments),
 			excluded: [...exclusions.values()],
+			structuredFilterDecisions,
 			missingInformation: profileContext.missingInformation,
-			assumptions: [],
+			assumptions,
 		},
 	};
 };

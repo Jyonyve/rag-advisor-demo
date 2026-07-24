@@ -4,11 +4,13 @@ import {
 	documentDraftUpdateSchema,
 	documentDraftRewriteSchema,
 	documentRetrievalPreferenceSchema,
+	financeReportDraftCreateSchema,
 	generatedDocumentDraftCreateSchema,
 	manualDocumentDraftCreateSchema,
 	type DocumentDraftRewrite,
 	type DocumentDraftUpdate,
 	type DocumentInfo,
+	type FinanceReportDraftCreate,
 	type GeneratedDocumentDraftCreate,
 	type ManualDocumentDraftCreate,
 } from '@rag-advisor-demo/shared/domain';
@@ -17,6 +19,7 @@ import { documentStore } from '../store/documentStore.js';
 import { assertOwnedSession, getSessionUserId } from '../util/authUtils.js';
 import { asyncHandler, genRoutePattern } from '../util/routeHelpers.js';
 import { documentGenerationService } from '../service/documentGenerationService.js';
+import { financeReportService } from '../service/financeReportService.js';
 
 const router: Router = express.Router();
 
@@ -61,6 +64,17 @@ router.post(
 			getSessionUserId(req),
 			session
 		);
+		res.status(201).json({ documentInfo: document, documentInfos: [document] });
+	})
+);
+
+router.post(
+	genRoutePattern('generateFinanceReport'),
+	verifySession(),
+	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		const input = parseBody<FinanceReportDraftCreate>(financeReportDraftCreateSchema, req.body);
+		const session = await assertOwnedSession(req, input.sessionId);
+		const document = await financeReportService.generateDraft(input, getSessionUserId(req), session);
 		res.status(201).json({ documentInfo: document, documentInfos: [document] });
 	})
 );

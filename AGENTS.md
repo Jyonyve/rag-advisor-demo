@@ -24,6 +24,7 @@ Use `pnpm`, never npm or yarn.
 - Treat migrations and seed commands as operationally sensitive.
 - Every seed/import command must default to a no-write dry run.
 - Use `pnpm preflight:finance` for the local, no-write finance fixture checkpoint.
+- Use `pnpm eval:finance` for deterministic, provider-free finance suitability evaluation.
 - Use `pnpm seed:finance` for the database-aware no-write fixture checkpoint and pass `-- --apply`
   only after reviewing its report. If multiple local users exist, select the intended owner with
   `--owner-user-id=<id>`; never persist that runtime identifier in repository fixtures.

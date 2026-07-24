@@ -12,6 +12,7 @@ import {
 	ChatMessage,
 	LoreCategory,
 	HistoryCategory,
+	AssistantDomain,
 } from '@rag-advisor-demo/shared/domain';
 import { convertArrayToString } from '@rag-advisor-demo/shared/util';
 import { parseEntriesToConversation } from './chatParseUtils.js';
@@ -244,6 +245,10 @@ export const buildStaticSystemPrompt = (
 	langCode: LangCode = 'kor',
 	adultContentEnabled?: boolean
 ): string => {
+	if (characterInfo.domain === 'finance') {
+		return buildFinanceStaticSystemPrompt(characterInfo, profileInfo, langCode);
+	}
+
 	const charName = characterInfo.showName;
 	const userName = profileInfo.showName;
 
@@ -301,6 +306,38 @@ ${characterBaseline}
 ${rules}`.trim();
 };
 
+export const buildFinanceStaticSystemPrompt = (
+	characterInfo: CharacterInfo,
+	profileInfo: ProfileInfo,
+	langCode: LangCode = 'kor'
+): string => {
+	const languageEnforcement =
+		LANGUAGE_ENFORCEMENT_DIRECTIVES[langCode] || LANGUAGE_ENFORCEMENT_DIRECTIVES.eng;
+	const profileJson = JSON.stringify(profileInfo.domainProfile ?? null, null, 2);
+	const characterBaseline = buildCharacterBaselinePrompt(characterInfo, profileInfo, langCode);
+
+	return `${languageEnforcement}
+
+You are "${characterInfo.showName}", an educational assistant for a fictional financial-product RAG demonstration.
+
+${characterBaseline}
+
+Canonical session profile:
+${profileJson}
+
+Finance response rules:
+- This is fictional demo data and educational product guidance, not financial advice.
+- Never claim to be a licensed adviser, execute a transaction, guarantee principal, yield, income, performance, or any outcome.
+- The current user message is authoritative for this response. Treat explicit hypothetical conditions as temporary; never claim they changed the persisted session profile.
+- Recommend or compare a product only when its eligible official Finance Lore is present in the server-selected evidence.
+- Treat product disclosures as warnings about their linked product, never as standalone products.
+- Ground every product-specific claim in the canonical evidence body and cite its stable source ID in square brackets.
+- Do not cite excluded, absent, or invented source IDs. Do not invent rates, fees, guarantees, issuers, tax treatment, or eligibility.
+- Explain material risk, liquidity, horizon mismatch, assumptions, and missing profile information.
+- If evidence is insufficient, say what is missing and avoid a product recommendation.
+- Respond directly and professionally. Do not roleplay, narrate a fictional scene, or invent the user's actions or thoughts.`.trim();
+};
+
 /**
  * Keeps speaker identity and evidence handling stable after recalled memory is injected.
  * This is placed close to the current turn so third-person memory summaries cannot become
@@ -309,9 +346,20 @@ ${rules}`.trim();
 export const buildPersonaResponseContract = (
 	characterName: string,
 	userName: string,
-	langCode: LangCode = 'kor'
-): string =>
-	langCode === 'kor'
+	langCode: LangCode = 'kor',
+	domain?: AssistantDomain
+): string => {
+	if (domain === 'finance') {
+		return `**Finance response contract:**
+- Return one complete response to the current user request.
+- Use only eligible server-selected evidence for product claims and cite stable source IDs exactly.
+- Use conditional wording; disclose assumptions and missing information.
+- Include a concise statement that the products and scenarios are fictional demo data and the response is not financial advice.
+- Keep groundingDecision consistent with the evidence: supported only when evidence supports the material claims, uncertain when evidence is incomplete, and contradicted when the request conflicts with evidence.
+- Set emotion to a neutral supported value.`;
+	}
+
+	return langCode === 'kor'
 		? `**현재 응답 계약:**
 • 지금 답하는 인물은 반드시 "${characterName}"이다. "${userName}"의 관점이나 목소리로 답하지 않는다.
 • 기억의 user/character 표시는 화자 역할의 근거다. 과거 요약의 서술자나 다른 인물의 관점을 현재 화자로 이어받지 않는다.
@@ -338,6 +386,7 @@ export const buildPersonaResponseContract = (
 • If evidence is absent, stay in character and express uncertainty without mentioning settings, records, databases, retrieval, or AI.
 • If a reference such as "that night" or "that choice" could mean multiple events, ask a brief clarifying question instead of choosing one.
 • Center narration on "${characterName}"'s actions and inner experience, and generate dialogue only for "${characterName}".`;
+};
 
 export const buildContradictedResponseRevisionPrompt = (
 	characterName: string,
@@ -401,9 +450,21 @@ export const buildLongTermMemoryPrompt = (
 	// Lore items
 	if (recalledMemories.relevantLore?.length) {
 		const loreContent = recalledMemories.relevantLore
-			.map((lore) => `- "${lore.title}": ${lore.summary}`)
+			.map((lore) =>
+				lore.domain === 'finance'
+					? `- [sourceId: ${lore.loreId}] "${lore.title}"
+  Summary: ${lore.summary}
+  Canonical body: ${lore.content}
+  Structured metadata: ${JSON.stringify(lore.structuredMetadata ?? {})}`
+					: `- "${lore.title}": ${lore.summary}`
+			)
 			.join('\n');
-		addSection(loreContent, '공식 설정 (절대 진실)', 'Official Lore (Absolute Truth)');
+		const hasFinanceLore = recalledMemories.relevantLore.some(({ domain }) => domain === 'finance');
+		addSection(
+			loreContent,
+			hasFinanceLore ? '적격 금융 데모 근거' : '공식 설정 (절대 진실)',
+			hasFinanceLore ? 'Eligible Finance Demo Evidence' : 'Official Lore (Absolute Truth)'
+		);
 	}
 
 	// History items
@@ -419,7 +480,9 @@ export const buildLongTermMemoryPrompt = (
 			.map((document) => {
 				const attribution = [document.issuer, document.viewpoint].filter(Boolean).join(' / ');
 				const body = document.body.slice(0, 4_000);
-				return `- "${document.title}"${attribution ? ` (${attribution})` : ''}: ${body}`;
+				return `- [sourceId: ${document.documentId}] "${document.title}"${
+					attribution ? ` (${attribution})` : ''
+				}: ${body}`;
 			})
 			.join('\n');
 		addSection(

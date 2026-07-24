@@ -264,7 +264,8 @@ export const buildPersonaMessages = (
 	const responseContract = buildPersonaResponseContract(
 		characterInfo.showName,
 		profileInfo.showName,
-		langCode
+		langCode,
+		characterInfo.domain
 	);
 
 	return [

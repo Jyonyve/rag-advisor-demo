@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { MemoryResponse } from '@rag-advisor-demo/shared/api';
 import {
 	documentDraftRewriteSchema,
+	financeReportDraftCreateSchema,
 	generatedDocumentDraftCreateSchema,
 } from '@rag-advisor-demo/shared/domain';
 import {
@@ -67,6 +68,21 @@ test('document generation request requires the RAG intent before generation', ()
 			modelName: 'model-1',
 		})
 	);
+});
+
+test('finance report requests cannot opt generated reports into RAG at creation', () => {
+	const parsed = financeReportDraftCreateSchema.parse({
+		sessionId: 'session-1',
+		requestText: 'Create a personalized fictional finance report.',
+		modelName: 'model-1',
+	});
+
+	assert.deepEqual(parsed, {
+		sessionId: 'session-1',
+		requestText: 'Create a personalized fictional finance report.',
+		modelName: 'model-1',
+	});
+	assert.throws(() => financeReportDraftCreateSchema.parse({ ...parsed, includeInRag: true }));
 });
 
 test('document rewrite request requires edit instruction, model, and expected revision', () => {

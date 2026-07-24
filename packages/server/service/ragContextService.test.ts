@@ -11,11 +11,12 @@ import {
 import { buildSessionId } from '@rag-advisor-demo/shared/util';
 
 import { DEMO_CHARACTER_FIXTURES, DEMO_LORE_FIXTURES } from '../fixture/domainFixtures.js';
+import { FINANCE_CATALOG_FIXTURES } from '../fixture/financeFixtures.js';
 import { resolveRagContext } from './ragContextService.js';
 
 const USER_ID = 'rag-context-demo-user';
-const FINANCE_CHARACTER = DEMO_CHARACTER_FIXTURES[0].character;
-const HEALTHCARE_CHARACTER = DEMO_CHARACTER_FIXTURES[1].character;
+const FINANCE_CHARACTER = { ...DEMO_CHARACTER_FIXTURES[0].character, userId: USER_ID };
+const HEALTHCARE_CHARACTER = { ...DEMO_CHARACTER_FIXTURES[1].character, userId: USER_ID };
 
 const profile = (
 	sessionId: string,
@@ -221,6 +222,46 @@ test('uses the same resolver for healthcare operations context', () => {
 		resolved.evidence.items.map(({ sourceId }) => sourceId),
 		[DEMO_LORE_FIXTURES[1].loreId]
 	);
+	assert.deepEqual(resolved.evidence.structuredFilterDecisions, []);
+});
+
+test('applies finance suitability filters and exposes request-scoped decisions', () => {
+	const sessionId = buildSessionId(FINANCE_CHARACTER.characterId);
+	const resolved = resolveRagContext({
+		sessionId,
+		userId: USER_ID,
+		currentMessage: 'Assume I need the money in 6 months for this answer only.',
+		character: FINANCE_CHARACTER,
+		profile: profile(sessionId, {
+			domain: 'finance',
+			investmentHorizonMonths: 60,
+			liquidityNeed: 'low',
+			riskPreference: 'growth',
+			constraints: [],
+		}),
+		memories: memories({
+			relevantLore: [
+				{ ...DEMO_LORE_FIXTURES[0], userId: USER_ID },
+				...FINANCE_CATALOG_FIXTURES.map(({ lore }) => ({ ...lore, userId: USER_ID })),
+			],
+		}),
+	});
+
+	assert.deepEqual(
+		resolved.memories.relevantLore.map(({ fixtureId }) => fixtureId),
+		['finance-assistant-core', 'cedar-reserve-account', 'cedar-reserve-account-disclosure']
+	);
+	assert.deepEqual(resolved.evidence.assumptions, [
+		{ source: 'current_request', description: 'Temporary investment horizon: 6 months.' },
+	]);
+	assert.ok(
+		resolved.evidence.structuredFilterDecisions.some(
+			({ sourceId, decision, reasons }) =>
+				sourceId === 'summit-growth-portfolio_demo-lore' &&
+				decision === 'excluded' &&
+				reasons.includes('horizon_mismatch')
+		)
+	);
 });
 
 test('rejects mismatched Character, Profile ownership, and Profile domain before context use', () => {
@@ -236,6 +277,18 @@ test('rejects mismatched Character, Profile ownership, and Profile domain before
 				memories: memories(),
 			}),
 		/Session Character does not match/
+	);
+	assert.throws(
+		() =>
+			resolveRagContext({
+				sessionId,
+				userId: USER_ID,
+				currentMessage: 'Demo request',
+				character: { ...FINANCE_CHARACTER, userId: 'other-user' },
+				profile: profile(sessionId, { domain: 'finance', constraints: [] }),
+				memories: memories(),
+			}),
+		/not owned/
 	);
 	assert.throws(
 		() =>

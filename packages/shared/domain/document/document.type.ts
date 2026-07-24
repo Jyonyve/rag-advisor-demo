@@ -92,6 +92,16 @@ export const generatedDocumentDraftCreateSchema = z.object({
 
 export type GeneratedDocumentDraftCreate = z.infer<typeof generatedDocumentDraftCreateSchema>;
 
+export const financeReportDraftCreateSchema = z
+	.object({
+		sessionId: z.string().min(1),
+		requestText: z.string().trim().min(1).max(5_000),
+		modelName: z.string().trim().min(1).max(200),
+	})
+	.strict();
+
+export type FinanceReportDraftCreate = z.infer<typeof financeReportDraftCreateSchema>;
+
 export const documentDraftRewriteSchema = z.object({
 	editInstruction: z.string().trim().min(1).max(5_000),
 	modelName: z.string().trim().min(1).max(200),
