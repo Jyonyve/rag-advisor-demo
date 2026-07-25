@@ -20,6 +20,7 @@ export const useSessionApi = () => {
 			characterId: string;
 			firstCharMessage: string;
 			contentPolicy: SessionContentPolicy;
+			title?: string;
 		}
 	>({
 		mutationFn: async (variables) => {

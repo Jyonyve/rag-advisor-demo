@@ -3,6 +3,7 @@ import type { DocumentResponse } from '@rag-advisor-demo/shared/api';
 import type {
 	DocumentDraftRewrite,
 	DocumentDraftUpdate,
+	FinanceReportDraftCreate,
 	GeneratedDocumentDraftCreate,
 	ManualDocumentDraftCreate,
 } from '@rag-advisor-demo/shared/domain';
@@ -37,6 +38,14 @@ export const useDocumentApi = () => {
 	const generateDraft = useMutation<DocumentResponse, Error, GeneratedDocumentDraftCreate>({
 		mutationFn: async (input) => {
 			const url = genApiUrl(MODULE_NAMES.DOCUMENT, 'generateDraft');
+			return (await apiClient.post<DocumentResponse>(url, input)).data;
+		},
+		onSuccess: (_, input) => invalidateSession(input.sessionId),
+	});
+
+	const generateFinanceReport = useMutation<DocumentResponse, Error, FinanceReportDraftCreate>({
+		mutationFn: async (input) => {
+			const url = genApiUrl(MODULE_NAMES.DOCUMENT, 'generateFinanceReport');
 			return (await apiClient.post<DocumentResponse>(url, input)).data;
 		},
 		onSuccess: (_, input) => invalidateSession(input.sessionId),
@@ -106,16 +115,19 @@ export const useDocumentApi = () => {
 		getDocumentsBySession,
 		createManualDraft: createManualDraft.mutateAsync,
 		generateDraft: generateDraft.mutateAsync,
+		generateFinanceReport: generateFinanceReport.mutateAsync,
 		updateDraft: updateDraft.mutateAsync,
 		rewriteDraft: rewriteDraft.mutateAsync,
 		approve: approve.mutateAsync,
 		archive: archive.mutateAsync,
 		setRetrievalPreference: setRetrievalPreference.mutateAsync,
 		deleteDraft: deleteDraft.mutateAsync,
-		isGenerating: generateDraft.isPending || rewriteDraft.isPending,
+		isGenerating:
+			generateDraft.isPending || generateFinanceReport.isPending || rewriteDraft.isPending,
 		isMutating:
 			createManualDraft.isPending ||
 			generateDraft.isPending ||
+			generateFinanceReport.isPending ||
 			updateDraft.isPending ||
 			rewriteDraft.isPending ||
 			approve.isPending ||

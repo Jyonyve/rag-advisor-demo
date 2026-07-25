@@ -1,0 +1,95 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import {
+	buildFinanceDomainProfile,
+	buildHealthcareDomainProfile,
+	countEvidenceKinds,
+	getSessionDomain,
+	summarizeDomainProfile,
+} from './workspaceConfig.js';
+
+test('finance profile builder preserves the strict discriminator and omits missing suitability fields', () => {
+	assert.deepEqual(
+		buildFinanceDomainProfile({
+			investmentGoal: ' Emergency reserve ',
+			investmentHorizonMonths: '',
+			liquidityNeed: 'high',
+			riskPreference: '',
+			constraints: 'No lock-up, fictional demo only',
+		}),
+		{
+			domain: 'finance',
+			investmentGoal: 'Emergency reserve',
+			liquidityNeed: 'high',
+			constraints: ['No lock-up', 'fictional demo only'],
+		}
+	);
+});
+
+test('healthcare profile builder keeps incomplete profiles distinguishable from missing profiles', () => {
+	assert.deepEqual(
+		buildHealthcareDomainProfile({
+			workflowTopic: '',
+			requesterRole: 'patient_support',
+			urgency: '',
+			constraints: '',
+		}),
+		{ domain: 'healthcare_operations', requesterRole: 'patient_support', constraints: [] }
+	);
+});
+
+test('workspace utilities identify supported sessions and expose missing fields', () => {
+	assert.equal(
+		getSessionDomain({
+			sessionId: 'session',
+			userId: 'user',
+			profileId: 'profile',
+			characterId: 'finance-assistant_demo',
+			title: 'Demo',
+			createdAt: '',
+			updatedAt: '',
+			messageCount: 0,
+			status: 'active',
+			type: 'session',
+			lastCharMessage: '',
+			userNote: '',
+		}),
+		'finance'
+	);
+	assert.equal(
+		summarizeDomainProfile({ domain: 'finance', constraints: [] }).filter((field) => field.missing)
+			.length,
+		4
+	);
+});
+
+test('evidence counts remain grouped by source kind', () => {
+	assert.deepEqual(
+		countEvidenceKinds({
+			domain: 'finance',
+			characterId: 'finance-assistant_demo',
+			sessionId: 'session',
+			profileFieldsUsed: [],
+			items: [
+				{ sourceKind: 'character_lore', sourceId: 'one', label: 'One', domain: 'finance' },
+				{ sourceKind: 'character_lore', sourceId: 'two', label: 'Two', domain: 'finance' },
+				{
+					sourceKind: 'session_document',
+					sourceId: 'three',
+					label: 'Three',
+					domain: 'finance',
+					origin: 'manual',
+				},
+			],
+			excluded: [],
+			structuredFilterDecisions: [],
+			missingInformation: [],
+			assumptions: [],
+		}),
+		[
+			{ label: 'Official domain lore', count: 2 },
+			{ label: 'Session documents', count: 1 },
+		]
+	);
+});

@@ -28,6 +28,9 @@ export const useProfileApi = () => {
 
 			// Invalidate all profile lists since a new/updated profile affects all lists
 			queryClient.invalidateQueries({ queryKey: ['profiles', 'list'] });
+			queryClient.invalidateQueries({
+				queryKey: ['profiles', 'detail', 'getProfileBySessionId', variables.sessionId],
+			});
 		},
 	});
 
