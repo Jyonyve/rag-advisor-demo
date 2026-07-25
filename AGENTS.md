@@ -28,6 +28,9 @@ Use `pnpm`, never npm or yarn.
 - Use `pnpm seed:finance` for the database-aware no-write fixture checkpoint and pass `-- --apply`
   only after reviewing its report. If multiple local users exist, select the intended owner with
   `--owner-user-id=<id>`; never persist that runtime identifier in repository fixtures.
+- Use `pnpm smoke:finance -- --owner-user-id=<id>` for the database-aware, no-write live finance
+  checkpoint. Review its planned writes and provider calls before adding `--apply`. The command
+  uses a deterministic fictional Session/Profile and never persists the runtime owner in fixtures.
 - Use `pnpm db:check` for credential-safe, read-only database verification.
 - Do not write to Neon or call embedding/LLM APIs until the dry-run report has been reviewed.
 - Prefer incremental, resumable embedding operations.

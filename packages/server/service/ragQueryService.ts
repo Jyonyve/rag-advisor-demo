@@ -16,6 +16,8 @@ export interface TransformedQuery {
 	termAliases: Array<{ koreanTerm: string; englishTerm: string }>;
 }
 
+export const MAX_RETRIEVAL_QUERY_TEXTS = 8;
+
 export const ragQueryService = {
 	/**
 	 * Transforms a raw user query into an all-English set of search terms and structured
@@ -59,7 +61,9 @@ export const ragQueryService = {
 			const finalExtraction =
 				extractedData.status === 'fulfilled' ? extractedData.value : ({} as FilterCriteria); // Fallback to empty
 
-			const expandedQueries = ragQueryService._expandQuery(finalExtraction);
+			const expandedQueries = ragQueryService
+				._expandQuery(finalExtraction)
+				.slice(0, MAX_RETRIEVAL_QUERY_TEXTS - 1);
 			const result = {
 				queryTexts: [finalTranslation, ...expandedQueries],
 				filterCriteria: finalExtraction,

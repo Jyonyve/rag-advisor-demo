@@ -5,6 +5,7 @@ import type { MemoryResponse } from '@rag-advisor-demo/shared/api';
 import { METADATA_TYPES } from '@rag-advisor-demo/shared/config';
 import type { ProfileInfo } from '@rag-advisor-demo/shared/domain';
 import { buildSessionId } from '@rag-advisor-demo/shared/util';
+import { ensureFinanceDemoDisclaimer, FINANCE_DEMO_NOTICE } from './orchestrationService.js';
 
 import { DEMO_CHARACTER_FIXTURES } from '../fixture/domainFixtures.js';
 import { FINANCE_CATALOG_FIXTURES } from '../fixture/financeFixtures.js';
@@ -12,6 +13,21 @@ import { buildPersonaMessages } from './personaEngine.js';
 
 const character = DEMO_CHARACTER_FIXTURES[0].character;
 const sessionId = buildSessionId(character.characterId);
+
+test('finance chat responses receive a deterministic demo disclaimer when omitted', () => {
+	assert.equal(
+		ensureFinanceDemoDisclaimer('A grounded comparison.', { domain: 'finance' }),
+		`A grounded comparison.\n\n${FINANCE_DEMO_NOTICE}`
+	);
+	assert.equal(
+		ensureFinanceDemoDisclaimer('This is not financial advice.', { domain: 'finance' }),
+		'This is not financial advice.'
+	);
+	assert.equal(
+		ensureFinanceDemoDisclaimer('Administrative guidance.', { domain: 'healthcare_operations' }),
+		'Administrative guidance.'
+	);
+});
 const profile: ProfileInfo = {
 	profileId: 'finance-profile_demo',
 	sessionId,

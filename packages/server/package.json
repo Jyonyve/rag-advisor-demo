@@ -14,6 +14,7 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.json",
 		"fixture:evaluate:finance": "cross-env NODE_ENV=test NODE_OPTIONS=--conditions=development tsx fixture/financeEvaluation.ts",
+		"fixture:smoke:finance": "cross-env NODE_ENV=production NODE_OPTIONS=--conditions=development tsx --env-file ../../.env fixture/financeLiveSmoke.ts",
 		"fixture:preflight:finance": "cross-env NODE_ENV=test NODE_OPTIONS=--conditions=development tsx fixture/financePreflight.ts",
 		"clean": "rimraf ./dist",
 		"dev": "cross-env NODE_OPTIONS=--conditions=development tsx watch --exclude ../client/node_modules/** --exclude ../../.vite_cache/** --env-file ../../.env ./server.ts",
@@ -22,7 +23,7 @@
 		"db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
 		"db:studio": "drizzle-kit studio --config drizzle.config.ts",
 		"fixture:seed:finance": "cross-env NODE_ENV=production NODE_OPTIONS=--conditions=development tsx --env-file ../../.env fixture/financeFixtureSeed.ts",
-		"test": "cross-env NODE_ENV=test NODE_OPTIONS=--conditions=development tsx --test fixture/domainFixtures.test.ts fixture/financeFixtureHydration.test.ts fixture/financeFixtureSeed.test.ts fixture/financeEvaluation.test.ts service/ragContextService.test.ts service/financeProductFilter.test.ts service/personaEngine.test.ts service/financeReportService.test.ts service/documentGenerationService.test.ts service/llmService.test.ts service/modelCatalogService.test.ts service/characterGlossaryJobService.test.ts service/embeddingJobService.test.ts service/embeddingService.test.ts service/publicDemoService.test.ts store/documentStore.test.ts store/loreStore.test.ts store/termStore.test.ts util/structuredOutputUtils.test.ts util/partialJsonUtils.test.ts util/backgroundJobQueue.test.ts util/languageUtils.test.ts util/authUtils.test.ts util/schemaUtils.test.ts util/ragContinuityUtils.test.ts util/ragTraceUtils.test.ts util/jsonlLogger.test.ts util/imageStorageUtils.test.ts util/imageProcessingUtils.test.ts util/chatParseUtils.test.ts"
+		"test": "cross-env NODE_ENV=test NODE_OPTIONS=--conditions=development tsx --test fixture/domainFixtures.test.ts fixture/financeFixtureHydration.test.ts fixture/financeFixtureSeed.test.ts fixture/financeEvaluation.test.ts fixture/financeLiveSmoke.test.ts service/ragContextService.test.ts service/ragQueryService.test.ts service/financeProductFilter.test.ts service/personaEngine.test.ts service/financeReportService.test.ts service/documentGenerationService.test.ts service/llmService.test.ts service/modelCatalogService.test.ts service/characterGlossaryJobService.test.ts service/embeddingJobService.test.ts service/embeddingService.test.ts service/publicDemoService.test.ts store/documentStore.test.ts store/loreStore.test.ts store/termStore.test.ts util/structuredOutputUtils.test.ts util/partialJsonUtils.test.ts util/backgroundJobQueue.test.ts util/languageUtils.test.ts util/authUtils.test.ts util/schemaUtils.test.ts util/ragContinuityUtils.test.ts util/ragTraceUtils.test.ts util/jsonlLogger.test.ts util/imageStorageUtils.test.ts util/imageProcessingUtils.test.ts util/chatParseUtils.test.ts"
 	},
 	"dependencies": {
 		"@langchain/anthropic": "^0.3.30",

@@ -37,6 +37,17 @@ export interface ReceiveBotResponseOptions {
 	onDelta?: (delta: string) => void;
 }
 
+export const FINANCE_DEMO_NOTICE =
+	'Demo notice: These products and scenarios are fictional demo data. This is educational information, not financial advice.';
+
+export const ensureFinanceDemoDisclaimer = (
+	response: string,
+	character: Pick<CharacterInfo, 'domain'>
+): string => {
+	if (character.domain !== 'finance' || /not financial advice/i.test(response)) return response;
+	return `${response.trim()}\n\n${FINANCE_DEMO_NOTICE}`;
+};
+
 /**
  * FINAL VERSION:
  * 클라이언트가 호출하는 메인 엔드포인트.
@@ -302,7 +313,9 @@ async function _generateAndAppendResponse(
 	);
 	options.logger?.checkpoint('personaGeneration.complete', { emotion: personaResponse.emotion });
 
-	const botChatEntries = sanitizeLlmResponse(personaResponse.response);
+	const botChatEntries = sanitizeLlmResponse(
+		ensureFinanceDemoDisclaimer(personaResponse.response, characterInfo)
+	);
 	// 3. Create the new bot response message.
 	const request = buildChatMessage(
 		'user',
