@@ -18,6 +18,9 @@ export const RAG_EXCLUSION_REASONS = [
 	'horizon_mismatch',
 	'liquidity_mismatch',
 	'risk_mismatch',
+	'requester_role_mismatch',
+	'workflow_topic_mismatch',
+	'urgency_mismatch',
 ] as const;
 
 export const RAG_STRUCTURED_FILTER_DECISIONS = ['eligible', 'excluded'] as const;

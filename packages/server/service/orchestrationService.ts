@@ -39,13 +39,20 @@ export interface ReceiveBotResponseOptions {
 
 export const FINANCE_DEMO_NOTICE =
 	'Demo notice: These products and scenarios are fictional demo data. This is educational information, not financial advice.';
+export const HEALTHCARE_OPERATIONS_DEMO_NOTICE =
+	'Demo notice: This facility, workflow, and scenario are fictional demo data. This is administrative guidance, not medical advice.';
 
-export const ensureFinanceDemoDisclaimer = (
+export const ensureDomainDemoDisclaimer = (
 	response: string,
 	character: Pick<CharacterInfo, 'domain'>
 ): string => {
-	if (character.domain !== 'finance' || /not financial advice/i.test(response)) return response;
-	return `${response.trim()}\n\n${FINANCE_DEMO_NOTICE}`;
+	if (character.domain === 'finance' && !/not financial advice/i.test(response)) {
+		return `${response.trim()}\n\n${FINANCE_DEMO_NOTICE}`;
+	}
+	if (character.domain === 'healthcare_operations' && !/not medical advice/i.test(response)) {
+		return `${response.trim()}\n\n${HEALTHCARE_OPERATIONS_DEMO_NOTICE}`;
+	}
+	return response;
 };
 
 /**
@@ -314,7 +321,7 @@ async function _generateAndAppendResponse(
 	options.logger?.checkpoint('personaGeneration.complete', { emotion: personaResponse.emotion });
 
 	const botChatEntries = sanitizeLlmResponse(
-		ensureFinanceDemoDisclaimer(personaResponse.response, characterInfo)
+		ensureDomainDemoDisclaimer(personaResponse.response, characterInfo)
 	);
 	// 3. Create the new bot response message.
 	const request = buildChatMessage(

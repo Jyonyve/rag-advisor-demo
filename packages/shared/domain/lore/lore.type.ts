@@ -50,7 +50,19 @@ export const healthcareOperationsLoreStructuredMetadataSchema = z
 	.object({
 		domain: z.literal('healthcare_operations'),
 		knowledgeType: z.enum(['workflow', 'policy', 'operations_guide']),
-		workflowCode: z.string().trim().min(1).optional(),
+		workflowCode: z.string().trim().min(1),
+		workflowTopic: z.enum([
+			'general_operations',
+			'appointment_rescheduling',
+			'admission_discharge',
+			'records_privacy',
+			'billing_inquiry',
+			'his_access',
+		]),
+		allowedRequesterRoles: z
+			.array(z.enum(['nurse', 'doctor', 'admin_staff', 'patient_support']))
+			.min(1),
+		urgencyLevels: z.array(z.enum(['routine', 'time_sensitive'])).min(1),
 	})
 	.strict();
 

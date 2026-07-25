@@ -18,6 +18,7 @@ import {
 	validateBuiltInDomainFixtures,
 	validateDomainFixtures,
 } from './domainFixtures.js';
+import { HEALTHCARE_OPERATIONS_FIXTURES } from './healthcareOperationsFixtures.js';
 
 const cloneCharacters = (): DemoCharacterFixture[] =>
 	structuredClone(DEMO_CHARACTER_FIXTURES) as unknown as DemoCharacterFixture[];
@@ -42,13 +43,15 @@ test('built-in domain fixtures are deterministic and valid without providers or 
 	assert.equal(Object.isFrozen(DEMO_CHARACTER_FIXTURES[0].character), true);
 	assert.equal(Object.isFrozen(DEMO_LORE_FIXTURES), true);
 	assert.equal(Object.isFrozen(DEMO_LORE_FIXTURES[0].characterIds), true);
+	assert.equal(Object.isFrozen(HEALTHCARE_OPERATIONS_FIXTURES), true);
+	assert.equal(Object.isFrozen(HEALTHCARE_OPERATIONS_FIXTURES[0].lore.structuredMetadata), true);
 
 	const report = validateBuiltInDomainFixtures();
 	assert.deepEqual(report, {
 		valid: true,
 		characterCount: 2,
-		loreCount: 8,
-		expectedEmbeddingCalls: 8,
+		loreCount: 13,
+		expectedEmbeddingCalls: 13,
 		issues: [],
 	});
 });

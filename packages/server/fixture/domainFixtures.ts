@@ -11,6 +11,7 @@ import { buildSessionId, parseSessionId } from '@rag-advisor-demo/shared/util';
 
 import { deepFreeze, DEMO_FIXTURE_DATA_VERSION } from './fixtureUtils.js';
 import { FINANCE_CATALOG_FIXTURES } from './financeFixtures.js';
+import { HEALTHCARE_OPERATIONS_FIXTURES } from './healthcareOperationsFixtures.js';
 
 export { DEMO_FIXTURE_DATA_VERSION };
 export const DEMO_FIXTURE_OWNER_ID = 'demo-fixture-user';
@@ -128,6 +129,9 @@ export const DEMO_LORE_FIXTURES = deepFreeze([
 			domain: 'healthcare_operations',
 			knowledgeType: 'operations_guide',
 			workflowCode: 'DEMO-OPS-CORE',
+			workflowTopic: 'general_operations',
+			allowedRequesterRoles: ['nurse', 'doctor', 'admin_staff', 'patient_support'],
+			urgencyLevels: ['routine', 'time_sensitive'],
 		},
 	},
 ] as const satisfies readonly LoreInfo[]);
@@ -402,5 +406,9 @@ export const validateDomainFixtures = ({
 export const validateBuiltInDomainFixtures = (): FixtureValidationReport =>
 	validateDomainFixtures({
 		characters: DEMO_CHARACTER_FIXTURES,
-		lores: [...DEMO_LORE_FIXTURES, ...FINANCE_CATALOG_FIXTURES.map(({ lore }) => lore)],
+		lores: [
+			...DEMO_LORE_FIXTURES,
+			...FINANCE_CATALOG_FIXTURES.map(({ lore }) => lore),
+			...HEALTHCARE_OPERATIONS_FIXTURES.map(({ lore }) => lore),
+		],
 	});

@@ -23,6 +23,7 @@ import {
 	parseRequiredAssistantDomain,
 } from '../util/domainValidationUtils.js';
 import { filterFinanceLore } from './financeProductFilter.js';
+import { filterHealthcareOperationsLore } from './healthcareOperationsFilter.js';
 
 export interface ResolveRagContextInput {
 	sessionId: string;
@@ -224,6 +225,21 @@ export const resolveRagContext = (input: ResolveRagContextInput): ResolvedRagCon
 		structuredFilterDecisions = financeFilter.decisions;
 		assumptions = financeFilter.assumptions;
 		for (const decision of financeFilter.decisions) {
+			if (decision.decision !== 'excluded') continue;
+			for (const reason of decision.reasons) {
+				addExclusion(exclusions, 'character_lore', reason);
+			}
+		}
+	} else if (sessionProfile.domain === 'healthcare_operations') {
+		const healthcareFilter = filterHealthcareOperationsLore(
+			relevantLore,
+			sessionProfile,
+			input.currentMessage
+		);
+		relevantLore = healthcareFilter.eligibleLore;
+		structuredFilterDecisions = healthcareFilter.decisions;
+		assumptions = healthcareFilter.assumptions;
+		for (const decision of healthcareFilter.decisions) {
 			if (decision.decision !== 'excluded') continue;
 			for (const reason of decision.reasons) {
 				addExclusion(exclusions, 'character_lore', reason);

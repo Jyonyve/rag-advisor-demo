@@ -24,13 +24,19 @@ Use `pnpm`, never npm or yarn.
 - Treat migrations and seed commands as operationally sensitive.
 - Every seed/import command must default to a no-write dry run.
 - Use `pnpm preflight:finance` for the local, no-write finance fixture checkpoint.
+- Use `pnpm preflight:healthcare` for the local, no-write Healthcare Operations fixture checkpoint.
 - Use `pnpm eval:finance` for deterministic, provider-free finance suitability evaluation.
+- Use `pnpm eval:healthcare` for deterministic, provider-free Healthcare Operations evaluation.
 - Use `pnpm seed:finance` for the database-aware no-write fixture checkpoint and pass `-- --apply`
   only after reviewing its report. If multiple local users exist, select the intended owner with
   `--owner-user-id=<id>`; never persist that runtime identifier in repository fixtures.
+- Use `pnpm seed:healthcare` for the equivalent database-aware, default no-write Healthcare
+  Operations fixture checkpoint. Use the same explicit owner and `--apply` review boundary.
 - Use `pnpm smoke:finance -- --owner-user-id=<id>` for the database-aware, no-write live finance
   checkpoint. Review its planned writes and provider calls before adding `--apply`. The command
   uses a deterministic fictional Session/Profile and never persists the runtime owner in fixtures.
+- Use `pnpm smoke:healthcare -- --owner-user-id=<id>` for the equivalent Healthcare Operations
+  live checkpoint. Review its planned writes and provider calls before adding `--apply`.
 - Use `pnpm db:check` for credential-safe, read-only database verification.
 - Do not write to Neon or call embedding/LLM APIs until the dry-run report has been reviewed.
 - Prefer incremental, resumable embedding operations.

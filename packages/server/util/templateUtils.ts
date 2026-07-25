@@ -248,6 +248,9 @@ export const buildStaticSystemPrompt = (
 	if (characterInfo.domain === 'finance') {
 		return buildFinanceStaticSystemPrompt(characterInfo, profileInfo, langCode);
 	}
+	if (characterInfo.domain === 'healthcare_operations') {
+		return buildHealthcareOperationsStaticSystemPrompt(characterInfo, profileInfo, langCode);
+	}
 
 	const charName = characterInfo.showName;
 	const userName = profileInfo.showName;
@@ -338,6 +341,38 @@ Finance response rules:
 - Respond directly and professionally. Do not roleplay, narrate a fictional scene, or invent the user's actions or thoughts.`.trim();
 };
 
+export const buildHealthcareOperationsStaticSystemPrompt = (
+	characterInfo: CharacterInfo,
+	profileInfo: ProfileInfo,
+	langCode: LangCode = 'kor'
+): string => {
+	const languageEnforcement =
+		LANGUAGE_ENFORCEMENT_DIRECTIVES[langCode] || LANGUAGE_ENFORCEMENT_DIRECTIVES.eng;
+	const profileJson = JSON.stringify(profileInfo.domainProfile ?? null, null, 2);
+	const characterBaseline = buildCharacterBaselinePrompt(characterInfo, profileInfo, langCode);
+
+	return `${languageEnforcement}
+
+You are "${characterInfo.showName}", an administrative workflow assistant for a fictional Healthcare Operations RAG demonstration.
+
+${characterBaseline}
+
+Canonical session profile:
+${profileJson}
+
+Healthcare Operations response rules:
+- Use only fictional operational documents selected by the server. This is administrative demo guidance, not medical advice.
+- Never diagnose, recommend treatment or medication, perform clinical triage, interpret symptoms, or replace qualified clinical or privacy professionals.
+- The current user message is authoritative for this response. Treat explicit role, workflow, or urgency conditions as temporary; never claim they changed the persisted session profile.
+- Describe a workflow only when its eligible Healthcare Operations Lore is present in the server-selected evidence.
+- Respect requester-role, workflow-topic, and operational-urgency exclusions.
+- Ground workflow-specific claims in the canonical evidence body and cite its stable source ID in square brackets.
+- Do not cite excluded, absent, or invented source IDs. Do not invent facility rules, permissions, patient facts, credentials, prices, clinical decisions, or legal requirements.
+- If the request contains a clinical or emergency concern, do not triage it. State that this demo covers administrative workflow only and direct the user to the appropriate qualified human or emergency channel.
+- Explain missing profile information and temporary assumptions.
+- Respond directly and professionally. Do not roleplay, narrate a fictional scene, or invent the user's actions or thoughts.`.trim();
+};
+
 /**
  * Keeps speaker identity and evidence handling stable after recalled memory is injected.
  * This is placed close to the current turn so third-person memory summaries cannot become
@@ -356,6 +391,16 @@ export const buildPersonaResponseContract = (
 - Use conditional wording; disclose assumptions and missing information.
 - Include a concise statement that the products and scenarios are fictional demo data and the response is not financial advice.
 - Keep groundingDecision consistent with the evidence: supported only when evidence supports the material claims, uncertain when evidence is incomplete, and contradicted when the request conflicts with evidence.
+- Set emotion to a neutral supported value.`;
+	}
+	if (domain === 'healthcare_operations') {
+		return `**Healthcare Operations response contract:**
+- Return one complete administrative-workflow response to the current user request.
+- Use only eligible server-selected operational evidence and cite stable source IDs exactly.
+- Respect requester-role, workflow-topic, and urgency filters; disclose temporary assumptions and missing information.
+- Include a concise statement that the facility, workflows, and scenarios are fictional demo data and the response is not medical advice.
+- Do not provide diagnosis, treatment, medication, symptom interpretation, or clinical triage.
+- Keep groundingDecision consistent with the evidence: supported only when evidence supports the material workflow claims, uncertain when evidence is incomplete, and contradicted when the request conflicts with evidence.
 - Set emotion to a neutral supported value.`;
 	}
 
@@ -451,7 +496,7 @@ export const buildLongTermMemoryPrompt = (
 	if (recalledMemories.relevantLore?.length) {
 		const loreContent = recalledMemories.relevantLore
 			.map((lore) =>
-				lore.domain === 'finance'
+				lore.domain === 'finance' || lore.domain === 'healthcare_operations'
 					? `- [sourceId: ${lore.loreId}] "${lore.title}"
   Summary: ${lore.summary}
   Canonical body: ${lore.content}
@@ -460,10 +505,21 @@ export const buildLongTermMemoryPrompt = (
 			)
 			.join('\n');
 		const hasFinanceLore = recalledMemories.relevantLore.some(({ domain }) => domain === 'finance');
+		const hasHealthcareLore = recalledMemories.relevantLore.some(
+			({ domain }) => domain === 'healthcare_operations'
+		);
 		addSection(
 			loreContent,
-			hasFinanceLore ? '적격 금융 데모 근거' : '공식 설정 (절대 진실)',
-			hasFinanceLore ? 'Eligible Finance Demo Evidence' : 'Official Lore (Absolute Truth)'
+			hasFinanceLore
+				? '적격 금융 데모 근거'
+				: hasHealthcareLore
+					? '적격 헬스케어 운영 데모 근거'
+					: '공식 설정 (절대 진실)',
+			hasFinanceLore
+				? 'Eligible Finance Demo Evidence'
+				: hasHealthcareLore
+					? 'Eligible Healthcare Operations Demo Evidence'
+					: 'Official Lore (Absolute Truth)'
 		);
 	}
 

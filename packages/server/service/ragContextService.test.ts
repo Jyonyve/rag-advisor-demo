@@ -12,6 +12,7 @@ import { buildSessionId } from '@rag-advisor-demo/shared/util';
 
 import { DEMO_CHARACTER_FIXTURES, DEMO_LORE_FIXTURES } from '../fixture/domainFixtures.js';
 import { FINANCE_CATALOG_FIXTURES } from '../fixture/financeFixtures.js';
+import { HEALTHCARE_OPERATIONS_FIXTURES } from '../fixture/healthcareOperationsFixtures.js';
 import { resolveRagContext } from './ragContextService.js';
 
 const USER_ID = 'rag-context-demo-user';
@@ -222,7 +223,56 @@ test('uses the same resolver for healthcare operations context', () => {
 		resolved.evidence.items.map(({ sourceId }) => sourceId),
 		[DEMO_LORE_FIXTURES[1].loreId]
 	);
-	assert.deepEqual(resolved.evidence.structuredFilterDecisions, []);
+	assert.deepEqual(resolved.evidence.structuredFilterDecisions, [
+		{
+			sourceId: DEMO_LORE_FIXTURES[1].loreId,
+			label: DEMO_LORE_FIXTURES[1].title,
+			decision: 'eligible',
+			reasons: [],
+		},
+	]);
+});
+
+test('applies role-aware healthcare workflow filters through the shared resolver', () => {
+	const sessionId = buildSessionId(HEALTHCARE_CHARACTER.characterId);
+	const resolved = resolveRagContext({
+		sessionId,
+		userId: USER_ID,
+		currentMessage: 'Explain the fictional billing inquiry workflow.',
+		character: HEALTHCARE_CHARACTER,
+		profile: profile(sessionId, {
+			domain: 'healthcare_operations',
+			requesterRole: 'patient_support',
+			urgency: 'routine',
+			constraints: [],
+		}),
+		memories: memories({
+			relevantLore: [
+				{ ...DEMO_LORE_FIXTURES[1], userId: USER_ID },
+				...HEALTHCARE_OPERATIONS_FIXTURES.map(({ lore }) => ({ ...lore, userId: USER_ID })),
+			],
+		}),
+	});
+
+	assert.deepEqual(
+		resolved.memories.relevantLore.map(({ fixtureId }) => fixtureId),
+		['healthcare-operations-assistant-core', 'northstar-billing-inquiry']
+	);
+	assert.ok(
+		resolved.evidence.structuredFilterDecisions.some(
+			({ sourceId, decision, reasons }) =>
+				sourceId === 'northstar-admission-discharge-administration_demo-lore' &&
+				decision === 'excluded' &&
+				reasons.includes('workflow_topic_mismatch') &&
+				reasons.includes('requester_role_mismatch')
+		)
+	);
+	assert.ok(
+		resolved.evidence.excluded.some(
+			({ sourceKind, reason }) =>
+				sourceKind === 'character_lore' && reason === 'requester_role_mismatch'
+		)
+	);
 });
 
 test('applies finance suitability filters and exposes request-scoped decisions', () => {
