@@ -29,7 +29,12 @@ test('hydrates every finance product and disclosure fixture from canonical Lore 
 
 test('fictional Korean deposit fixtures preserve public-dataset provenance without becoming real products', () => {
 	const products = FINANCE_CATALOG_FIXTURES.filter(({ kind }) => kind === 'product');
-	const deposits = products.slice(0, 2);
+	assert.equal(products.length, 7);
+	const deposits = products.filter((fixture) => {
+		const metadata = financeLoreStructuredMetadataSchema.parse(fixture.lore.structuredMetadata);
+		return metadata.fictionalization !== undefined;
+	});
+	assert.equal(deposits.length, 4);
 	for (const fixture of deposits) {
 		const metadata = financeLoreStructuredMetadataSchema.parse(fixture.lore.structuredMetadata);
 		assert.equal(metadata.knowledgeType, 'product');
@@ -41,12 +46,20 @@ test('fictional Korean deposit fixtures preserve public-dataset provenance witho
 		assert.equal(metadata.fictionalization?.source.license, 'PUBLIC_DATA_NO_RESTRICTION');
 		assert.match(fixture.lore.content, /가상 데모 상품/);
 	}
-	const fundMetadata = financeLoreStructuredMetadataSchema.parse(
-		products[2]?.lore.structuredMetadata
+	const funds = products.filter((fixture) => {
+		const metadata = financeLoreStructuredMetadataSchema.parse(fixture.lore.structuredMetadata);
+		return metadata.productCategory === 'fund';
+	});
+	assert.equal(funds.length, 3);
+	for (const fixture of funds) {
+		const metadata = financeLoreStructuredMetadataSchema.parse(fixture.lore.structuredMetadata);
+		assert.equal(metadata.depositProtection, 'not_eligible');
+		assert.equal(metadata.fictionalization, undefined);
+	}
+	assert.equal(
+		FINANCE_CATALOG_FIXTURES.filter(({ kind }) => kind === 'disclosure').length,
+		products.length
 	);
-	assert.equal(fundMetadata.productCategory, 'fund');
-	assert.equal(fundMetadata.depositProtection, 'not_eligible');
-	assert.equal(fundMetadata.fictionalization, undefined);
 });
 
 test('rejects unknown and duplicate fixture IDs', () => {
@@ -120,10 +133,10 @@ test('finance preflight is deterministic and explicitly performs no external ope
 	});
 	assert.equal(report.databaseInspection.existingRecordCounts, 'not_inspected');
 	assert.deepEqual(report.plannedOperations.characterUpserts, ['finance-assistant_demo']);
-	assert.equal(report.plannedOperations.loreUpserts.length, 12);
+	assert.equal(report.plannedOperations.loreUpserts.length, 20);
 	assert.deepEqual(report.plannedOperations.documentUpserts, []);
-	assert.equal(report.plannedEmbeddings.replacementJobs, 12);
-	assert.deepEqual(report.plannedEmbeddings.bySourceType, { lore: 12, document: 0 });
+	assert.equal(report.plannedEmbeddings.replacementJobs, 20);
+	assert.deepEqual(report.plannedEmbeddings.bySourceType, { lore: 20, document: 0 });
 	assert.equal(report.localStableIdCollisions.length, 0);
 	assert.equal(report.validationFailures.length, 0);
 });

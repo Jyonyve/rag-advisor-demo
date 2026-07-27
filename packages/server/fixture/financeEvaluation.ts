@@ -40,7 +40,14 @@ export const FINANCE_EVALUATION_CASES: readonly FinanceEvaluationCase[] = [
 			constraints: [],
 		},
 		currentMessage: 'Compare eligible fictional demo products.',
-		expectedEligibleProductFixtureIds: ['cedar-reserve-account', 'harbor-income-note'],
+		expectedEligibleProductFixtureIds: [
+			'cedar-reserve-account',
+			'saebom-six-month-deposit',
+			'daeon-one-year-savings',
+			'harbor-income-note',
+			'ongyeol-short-bond-portfolio',
+			'hanul-balanced-portfolio',
+		],
 	},
 	{
 		id: 'growth-five-year',
@@ -54,7 +61,11 @@ export const FINANCE_EVALUATION_CASES: readonly FinanceEvaluationCase[] = [
 		currentMessage: 'Compare eligible fictional demo products.',
 		expectedEligibleProductFixtureIds: [
 			'cedar-reserve-account',
+			'saebom-six-month-deposit',
+			'daeon-one-year-savings',
 			'harbor-income-note',
+			'ongyeol-short-bond-portfolio',
+			'hanul-balanced-portfolio',
 			'summit-growth-portfolio',
 		],
 	},
@@ -68,7 +79,7 @@ export const FINANCE_EVALUATION_CASES: readonly FinanceEvaluationCase[] = [
 			constraints: [],
 		},
 		currentMessage: 'Assume I need the money in 6 months for this answer only.',
-		expectedEligibleProductFixtureIds: ['cedar-reserve-account'],
+		expectedEligibleProductFixtureIds: ['cedar-reserve-account', 'saebom-six-month-deposit'],
 	},
 ] as const;
 

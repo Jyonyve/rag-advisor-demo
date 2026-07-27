@@ -52,8 +52,8 @@ test('built-in domain fixtures are deterministic and valid without providers or 
 	assert.deepEqual(report, {
 		valid: true,
 		characterCount: 2,
-		loreCount: 18,
-		expectedEmbeddingCalls: 18,
+		loreCount: 26,
+		expectedEmbeddingCalls: 26,
 		issues: [],
 	});
 });

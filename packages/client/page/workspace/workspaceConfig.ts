@@ -34,9 +34,11 @@ export const WORKSPACE_DOMAINS: Record<AssistantDomain, WorkspaceDomainConfig> =
 		accent: '#f5a524',
 		softAccent: '#fff0c7',
 		suggestedPrompts: [
-			'Compare the available products for a three-year goal.',
-			'Which options preserve access to my money?',
-			'Show the evidence behind a moderate-risk comparison.',
+			'Which fictional product best preserves access to an emergency fund?',
+			'Compare the demand deposit and six-month term deposit for a short goal.',
+			'Which fictional product supports monthly saving over one year?',
+			'Compare the three-year deposit and balanced portfolio for moderate risk.',
+			'What trade-offs come with the five-year growth portfolio?',
 		],
 	},
 	healthcare_operations: {

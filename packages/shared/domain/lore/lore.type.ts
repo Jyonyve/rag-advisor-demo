@@ -35,7 +35,9 @@ export const financeLoreStructuredMetadataSchema = z
 		minimumHorizonMonths: z.number().int().nonnegative().optional(),
 		liquidityLevel: z.enum(['low', 'medium', 'high']).optional(),
 		productCode: z.string().trim().min(1).optional(),
-		productCategory: z.enum(['demand_deposit', 'term_deposit', 'fund']).optional(),
+		productCategory: z
+			.enum(['demand_deposit', 'term_deposit', 'installment_savings', 'fund'])
+			.optional(),
 		depositProtection: z.enum(['fictional_example_eligible', 'not_eligible', 'unknown']).optional(),
 		productFixtureId: z.string().trim().min(1).optional(),
 		disclosureCode: z.string().trim().min(1).optional(),

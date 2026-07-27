@@ -131,6 +131,10 @@ test('workspace copy provides distinct persisted language variants', () => {
 	assert.notEqual(getWorkspaceCopy('kor').references, getWorkspaceCopy('eng').references);
 	assert.equal(getWorkspaceDomainConfig('finance', 'kor').shortTitle, '금융');
 	assert.equal(getWorkspaceDomainConfig('finance', 'eng').shortTitle, 'Finance');
+	assert.equal(getWorkspaceDomainConfig('finance', 'kor').suggestedPrompts.length, 5);
+	assert.equal(getWorkspaceDomainConfig('finance', 'eng').suggestedPrompts.length, 5);
+	assert.match(getWorkspaceDomainConfig('finance', 'kor').suggestedPrompts[1]!, /6개월/);
+	assert.match(getWorkspaceDomainConfig('finance', 'eng').suggestedPrompts[3]!, /balanced/i);
 });
 
 test('workspace helpers localize profile, evidence, and report request copy', () => {

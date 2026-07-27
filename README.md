@@ -70,8 +70,9 @@ retrieval date, data-as-of date, document type, and reuse category.
 - [Korea Post Finance Development Institute deposit-product features dataset](https://www.data.go.kr/data/15090586/fileData.do),
   used only as a public-data structural reference under its stated unrestricted-use terms.
 
-The repository does not present or snapshot a real retail product. The two fictional Korean deposit
-fixtures use only the public dataset's field structure; their names, issuer, rates, eligibility,
-conditions, terms, and benefits are invented and recorded as changed fields in fixture provenance.
-The fund is fully fictional. Public-source summaries are not substitutes for the current official
-text.
+The repository does not present or snapshot a real retail product. Four fictional Korean deposit
+and savings fixtures use only the public dataset's field structure; their names, issuer, rates,
+eligibility, conditions, terms, and benefits are invented and recorded as changed fields in fixture
+provenance. Three additional fund fixtures are fully fictional. The seven products each have a
+linked fictional disclosure so retrieval can compare liquidity, horizon, risk, and protection
+trade-offs. Public-source summaries are not substitutes for the current official text.

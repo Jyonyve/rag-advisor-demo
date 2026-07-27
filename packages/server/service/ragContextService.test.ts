@@ -306,7 +306,13 @@ test('applies finance suitability filters and exposes request-scoped decisions',
 
 	assert.deepEqual(
 		resolved.memories.relevantLore.map(({ fixtureId }) => fixtureId),
-		['finance-assistant-core', 'cedar-reserve-account', 'cedar-reserve-account-disclosure']
+		[
+			'finance-assistant-core',
+			'cedar-reserve-account',
+			'saebom-six-month-deposit',
+			'saebom-six-month-deposit-disclosure',
+			'cedar-reserve-account-disclosure',
+		]
 	);
 	assert.deepEqual(resolved.evidence.assumptions, [
 		{ source: 'current_request', description: 'Temporary investment horizon: 6 months.' },

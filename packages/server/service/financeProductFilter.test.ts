@@ -32,11 +32,52 @@ test('finance filtering retains compatible products and their disclosures', () =
 			.filter(({ decision }) => decision === 'excluded')
 			.map(({ sourceId }) => sourceId),
 		[
+			'saebom-six-month-deposit_demo-lore',
+			'daeon-one-year-savings_demo-lore',
 			'harbor-income-note_demo-lore',
+			'ongyeol-short-bond-portfolio_demo-lore',
+			'hanul-balanced-portfolio_demo-lore',
 			'summit-growth-portfolio_demo-lore',
+			'saebom-six-month-deposit-disclosure_demo-lore',
+			'daeon-one-year-savings-disclosure_demo-lore',
+			'ongyeol-short-bond-portfolio-disclosure_demo-lore',
+			'hanul-balanced-portfolio-disclosure_demo-lore',
 			'harbor-income-note-disclosure_demo-lore',
 			'summit-growth-portfolio-disclosure_demo-lore',
 		]
+	);
+});
+
+test('three-year moderate profiles retain multiple distinct comparison candidates', () => {
+	const result = filterFinanceLore(
+		financeLores,
+		{
+			domain: 'finance',
+			investmentHorizonMonths: 36,
+			liquidityNeed: 'medium',
+			riskPreference: 'moderate',
+			constraints: [],
+		},
+		'Compare the fictional products for a three-year goal.'
+	);
+
+	assert.deepEqual(
+		result.eligibleLore
+			.filter(({ structuredMetadata }) => structuredMetadata?.knowledgeType === 'product')
+			.map(({ fixtureId }) => fixtureId),
+		[
+			'cedar-reserve-account',
+			'saebom-six-month-deposit',
+			'daeon-one-year-savings',
+			'harbor-income-note',
+			'ongyeol-short-bond-portfolio',
+			'hanul-balanced-portfolio',
+		]
+	);
+	assert.ok(
+		result.decisions
+			.find(({ sourceId }) => sourceId === 'summit-growth-portfolio_demo-lore')
+			?.reasons.includes('horizon_mismatch')
 	);
 });
 
