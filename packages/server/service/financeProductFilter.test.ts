@@ -80,7 +80,7 @@ test('request override analysis recognizes bounded English and Korean horizon fo
 test('product-term questions are not misclassified as personal request overrides', () => {
 	assert.deepEqual(
 		analyzeFinanceRequestOverrides(
-			'Does Harbor Income Note require a 3 year horizon and have medium liquidity?'
+			'Does the fictional 누리 3년 정기예금 require a 3 year horizon and have medium liquidity?'
 		),
 		{ investmentHorizonMonths: undefined, liquidityNeed: undefined, riskPreference: undefined }
 	);

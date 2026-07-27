@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { financeLoreStructuredMetadataSchema } from '@rag-advisor-demo/shared/domain';
+
 import type { FinanceCatalogFixture, FinanceEmbeddingFixtureMetadata } from './financeFixtures.js';
 import { FINANCE_CATALOG_FIXTURES, FINANCE_EMBEDDING_FIXTURE_METADATA } from './financeFixtures.js';
 import { hydrateFinanceCatalogFixtures } from './financeFixtureHydration.js';
@@ -23,6 +25,28 @@ test('hydrates every finance product and disclosure fixture from canonical Lore 
 	assert.equal(Object.isFrozen(FINANCE_CATALOG_FIXTURES), true);
 	assert.equal(Object.isFrozen(FINANCE_CATALOG_FIXTURES[0].lore), true);
 	assert.equal(Object.isFrozen(FINANCE_EMBEDDING_FIXTURE_METADATA), true);
+});
+
+test('fictional Korean deposit fixtures preserve public-dataset provenance without becoming real products', () => {
+	const products = FINANCE_CATALOG_FIXTURES.filter(({ kind }) => kind === 'product');
+	const deposits = products.slice(0, 2);
+	for (const fixture of deposits) {
+		const metadata = financeLoreStructuredMetadataSchema.parse(fixture.lore.structuredMetadata);
+		assert.equal(metadata.knowledgeType, 'product');
+		assert.equal(metadata.fictionalization?.method, 'STRUCTURE_ONLY_FICTIONALIZATION');
+		assert.equal(
+			metadata.fictionalization?.source.sourceId,
+			'KR-KPFD-POST-DEPOSIT-FEATURES-20251114'
+		);
+		assert.equal(metadata.fictionalization?.source.license, 'PUBLIC_DATA_NO_RESTRICTION');
+		assert.match(fixture.lore.content, /가상 데모 상품/);
+	}
+	const fundMetadata = financeLoreStructuredMetadataSchema.parse(
+		products[2]?.lore.structuredMetadata
+	);
+	assert.equal(fundMetadata.productCategory, 'fund');
+	assert.equal(fundMetadata.depositProtection, 'not_eligible');
+	assert.equal(fundMetadata.fictionalization, undefined);
 });
 
 test('rejects unknown and duplicate fixture IDs', () => {

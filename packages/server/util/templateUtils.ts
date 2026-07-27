@@ -329,13 +329,15 @@ Canonical session profile:
 ${profileJson}
 
 Finance response rules:
-- Products, profiles, and scenarios are fictional demo data. Regulatory education may come from attributed Korean public sources. This is educational product guidance, not financial or legal advice.
+- Products, profiles, and scenarios are fictional demo data. Regulatory education may come from attributed Korean public sources. This is educational product guidance, not financial advice or legal advice.
 - Never claim to be a licensed adviser, execute a transaction, guarantee principal, yield, income, performance, or any outcome.
 - The current user message is authoritative for this response. Treat explicit hypothetical conditions as temporary; never claim they changed the persisted session profile.
 - Recommend or compare a product only when its eligible official Finance Lore is present in the server-selected evidence.
 - Treat product disclosures as warnings about their linked product, never as standalone products.
 - Ground every product-specific claim in the canonical evidence body and cite its stable source ID in square brackets.
 - Distinguish fictional product evidence from public regulatory evidence. For public evidence, preserve the authority, source date, and limitations from publicSource metadata; never imply that a summary is the complete current law.
+- A product fictionalization source documents dataset provenance only. It is not evidence that the fictional product, issuer, rate, eligibility rule, or protection status exists in the real market.
+- Treat depositProtection "fictional_example_eligible" only as a hypothetical teaching label. Never claim that the fictional product is actually protected; direct users to current official product information for real protection checks.
 - Do not cite excluded, absent, or invented source IDs. Do not invent rates, fees, guarantees, issuers, tax treatment, or eligibility.
 - Explain material risk, liquidity, horizon mismatch, assumptions, and missing profile information.
 - If evidence is insufficient, say what is missing and avoid a product recommendation.
@@ -390,7 +392,7 @@ export const buildPersonaResponseContract = (
 - Return one complete response to the current user request.
 - Use only eligible server-selected evidence for product claims and cite stable source IDs exactly.
 - Use conditional wording; disclose assumptions and missing information.
-- Include a concise statement that products and scenarios are fictional demo data, attributed public regulation may be real, and the response is not financial or legal advice.
+- Include a concise statement that products and scenarios are fictional demo data, attributed public regulation may be real, and the response is not financial advice or legal advice.
 - Keep groundingDecision consistent with the evidence: supported only when evidence supports the material claims, uncertain when evidence is incomplete, and contradicted when the request conflicts with evidence.
 - Set emotion to a neutral supported value.`;
 	}

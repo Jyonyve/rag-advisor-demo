@@ -15,11 +15,12 @@ export const publicSourceAttributionSchema = z
 			'REGULATION_DETAIL',
 			'REGULATORY_GUIDANCE',
 			'POLICY_NOTICE',
+			'PRODUCT_DATASET',
 		]),
 		sourceUrl: z.url(),
 		publishedAt: z.iso.date().optional(),
 		retrievedAt: z.iso.date(),
-		license: z.enum(['KOREAN_LAW_TEXT', 'KOGL_TYPE_1_TEXT_ONLY']),
+		license: z.enum(['KOREAN_LAW_TEXT', 'KOGL_TYPE_1_TEXT_ONLY', 'PUBLIC_DATA_NO_RESTRICTION']),
 		dataAsOf: z.iso.date(),
 	})
 	.strict();
@@ -34,9 +35,20 @@ export const financeLoreStructuredMetadataSchema = z
 		minimumHorizonMonths: z.number().int().nonnegative().optional(),
 		liquidityLevel: z.enum(['low', 'medium', 'high']).optional(),
 		productCode: z.string().trim().min(1).optional(),
+		productCategory: z.enum(['demand_deposit', 'term_deposit', 'fund']).optional(),
+		depositProtection: z.enum(['fictional_example_eligible', 'not_eligible', 'unknown']).optional(),
 		productFixtureId: z.string().trim().min(1).optional(),
 		disclosureCode: z.string().trim().min(1).optional(),
 		publicSource: publicSourceAttributionSchema.optional(),
+		fictionalization: z
+			.object({
+				method: z.literal('STRUCTURE_ONLY_FICTIONALIZATION'),
+				source: publicSourceAttributionSchema,
+				changedFields: z.array(z.string().trim().min(1)).min(1),
+				note: z.string().trim().min(1),
+			})
+			.strict()
+			.optional(),
 	})
 	.strict()
 	.superRefine((metadata, context) => {
@@ -46,6 +58,8 @@ export const financeLoreStructuredMetadataSchema = z
 				'minimumHorizonMonths',
 				'liquidityLevel',
 				'productCode',
+				'productCategory',
+				'depositProtection',
 			] as const) {
 				if (metadata[field] === undefined) {
 					context.addIssue({
@@ -72,6 +86,23 @@ export const financeLoreStructuredMetadataSchema = z
 				code: 'custom',
 				path: ['publicSource'],
 				message: 'Public source attribution is only valid for finance education Lore.',
+			});
+		}
+		if (metadata.knowledgeType !== 'product' && metadata.fictionalization) {
+			context.addIssue({
+				code: 'custom',
+				path: ['fictionalization'],
+				message: 'Fictionalization provenance is only valid for finance product Lore.',
+			});
+		}
+		if (
+			metadata.fictionalization &&
+			metadata.fictionalization.source.documentType !== 'PRODUCT_DATASET'
+		) {
+			context.addIssue({
+				code: 'custom',
+				path: ['fictionalization', 'source', 'documentType'],
+				message: 'Fictionalized products must cite a product dataset.',
 			});
 		}
 	});

@@ -16,7 +16,7 @@ const copy = {
 			'Which fictional option best fits a moderate risk preference and a three-year horizon?',
 		guidance: 'GUIDANCE',
 		previewAnswer:
-			'The evidence supports comparing the Harbor Income Note with the Summit Growth Portfolio, while keeping their liquidity differences explicit.',
+			'The evidence supports comparing the fictional Nuri Three-Year Deposit with the Maru Growth Portfolio while keeping liquidity and protection differences explicit.',
 		eligibleSources: '3 eligible sources',
 		suitabilityFilters: '2 suitability filters',
 		financeHealthcare: 'FINANCE × HEALTHCARE OPERATIONS',
@@ -192,7 +192,7 @@ const copy = {
 		previewQuestion: '중간 위험 성향과 3년의 기간에 가장 적합한 가상 상품은 무엇인가요?',
 		guidance: '안내',
 		previewAnswer:
-			'근거상 Harbor Income Note와 Summit Growth Portfolio를 비교하되 유동성 차이를 명확히 밝혀야 합니다.',
+			'근거상 가상의 누리 3년 정기예금과 마루 성장 포트폴리오를 비교하되 유동성과 보호 여부의 차이를 명확히 밝혀야 합니다.',
 		eligibleSources: '사용 가능한 근거 3개',
 		suitabilityFilters: '적합성 필터 2개',
 		financeHealthcare: '금융 × 의료 운영',

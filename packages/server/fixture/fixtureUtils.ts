@@ -1,4 +1,4 @@
-export const DEMO_FIXTURE_DATA_VERSION = '2026-07-27.1';
+export const DEMO_FIXTURE_DATA_VERSION = '2026-07-27.2';
 
 export const deepFreeze = <T>(value: T): T => {
 	if (value && typeof value === 'object' && !Object.isFrozen(value)) {

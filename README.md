@@ -67,6 +67,11 @@ retrieval date, data-as-of date, document type, and reuse category.
   snapshot effective 2026-01-02.
 - [Financial Services Commission notice on the KRW 100 million deposit-protection limit](https://www.korea.kr/news/policyNewsView.do?newsId=148943235),
   text reused under the stated KOGL attribution condition.
+- [Korea Post Finance Development Institute deposit-product features dataset](https://www.data.go.kr/data/15090586/fileData.do),
+  used only as a public-data structural reference under its stated unrestricted-use terms.
 
-The repository does not snapshot real retail products: all products presented by the demo remain
-fictional. Public-source summaries are not substitutes for the current official text.
+The repository does not present or snapshot a real retail product. The two fictional Korean deposit
+fixtures use only the public dataset's field structure; their names, issuer, rates, eligibility,
+conditions, terms, and benefits are invented and recorded as changed fields in fixture provenance.
+The fund is fully fictional. Public-source summaries are not substitutes for the current official
+text.
