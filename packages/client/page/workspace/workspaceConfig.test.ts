@@ -10,6 +10,7 @@ import {
 	summarizeDomainProfile,
 } from './workspaceConfig.js';
 import { parseReportMarkdown } from './reportMarkdownUtils.js';
+import { getWorkspaceCopy, getWorkspaceDomainConfig } from './workspaceI18n.js';
 
 test('finance profile builder preserves the strict discriminator and omits missing suitability fields', () => {
 	assert.deepEqual(
@@ -122,4 +123,42 @@ test('report Markdown parser exposes headings, notices, lists, and paragraphs as
 			{ type: 'paragraph', text: 'Plain summary.' },
 		]
 	);
+});
+
+test('workspace copy provides distinct persisted language variants', () => {
+	assert.equal(getWorkspaceCopy('kor').report, '금융 보고서');
+	assert.equal(getWorkspaceCopy('eng').report, 'Finance report');
+	assert.notEqual(getWorkspaceCopy('kor').references, getWorkspaceCopy('eng').references);
+	assert.equal(getWorkspaceDomainConfig('finance', 'kor').shortTitle, '금융');
+	assert.equal(getWorkspaceDomainConfig('finance', 'eng').shortTitle, 'Finance');
+});
+
+test('workspace helpers localize profile, evidence, and report request copy', () => {
+	assert.equal(
+		summarizeDomainProfile(
+			{ domain: 'finance', riskPreference: 'moderate', constraints: [] },
+			'kor'
+		)[3]?.value,
+		'중간'
+	);
+	assert.equal(
+		countEvidenceKinds(
+			{
+				domain: 'finance',
+				characterId: 'finance-assistant_demo',
+				sessionId: 'session',
+				profileFieldsUsed: [],
+				items: [
+					{ sourceKind: 'character_lore', sourceId: 'lore_demo', label: 'Demo lore', domain: 'finance' },
+				],
+				missingInformation: [],
+				assumptions: [],
+				excluded: [],
+				structuredFilterDecisions: [],
+			},
+			'kor'
+		)[0]?.label,
+		'공식 도메인 지식'
+	);
+	assert.match(buildDefaultFinanceReportRequest(undefined, 'kor'), /가상 금융 상품/);
 });

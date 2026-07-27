@@ -396,6 +396,34 @@ textarea {
 	cursor: pointer;
 }
 
+.advisor-language-toggle {
+	padding: 7px 11px;
+	border: 1px solid var(--advisor-line);
+	border-radius: 999px;
+	background: transparent;
+	color: inherit;
+	font-size: 0.62rem;
+	font-weight: 750;
+	cursor: pointer;
+}
+
+.advisor-language-toggle--sidebar {
+	align-self: flex-start;
+	margin-top: 10px;
+	border-color: #4a4c45;
+	color: #d7d6ce;
+}
+
+.advisor-language-toggle:hover {
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.advisor-landing__nav-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+}
+
 .advisor-new-button:hover {
 	border-color: rgba(255, 255, 255, 0.3);
 	background: rgba(255, 255, 255, 0.1);

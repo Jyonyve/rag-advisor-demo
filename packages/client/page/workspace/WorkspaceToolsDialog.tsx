@@ -17,6 +17,7 @@ import type {
 import { useEffect, useMemo, useState } from 'react';
 
 import { useDocumentApi, useProfileApi } from '../../hook/api/index.js';
+import { useLanguage } from '../../provider/LanguageProvider.js';
 import {
 	buildDefaultFinanceReportRequest,
 	buildFinanceDomainProfile,
@@ -25,9 +26,9 @@ import {
 	EMPTY_HEALTHCARE_PROFILE,
 	type FinanceProfileDraft,
 	type HealthcareProfileDraft,
-	WORKSPACE_DOMAINS,
 } from './workspaceConfig.js';
 import { parseReportMarkdown } from './reportMarkdownUtils.js';
+import { getWorkspaceCopy, getWorkspaceDomainConfig, type WorkspaceCopy } from './workspaceI18n.js';
 
 export type WorkspaceToolTab = 'profile' | 'documents' | 'report';
 
@@ -63,11 +64,11 @@ const profileToHealthcareDraft = (profile: ProfileInfo): HealthcareProfileDraft 
 	};
 };
 
-const documentStatusLabel = (document: DocumentInfo): string => {
-	if (document.status === 'archived') return 'Archived';
-	if (document.status === 'approved' && document.retrievalEnabled) return 'In RAG';
-	if (document.status === 'approved') return 'Approved';
-	return 'Draft';
+const documentStatusLabel = (document: DocumentInfo, text: WorkspaceCopy): string => {
+	if (document.status === 'archived') return text.archived;
+	if (document.status === 'approved' && document.retrievalEnabled) return text.inRag;
+	if (document.status === 'approved') return text.approved;
+	return text.draft;
 };
 
 const ReportMarkdown = ({ body }: { body: string }) => {
@@ -105,7 +106,9 @@ export function WorkspaceToolsDialog({
 	profile,
 	onClose,
 }: WorkspaceToolsDialogProps) {
-	const config = WORKSPACE_DOMAINS[domain];
+	const { lang } = useLanguage();
+	const text = getWorkspaceCopy(lang);
+	const config = getWorkspaceDomainConfig(domain, lang);
 	const [tab, setTab] = useState<WorkspaceToolTab>(initialTab);
 	const [financeDraft, setFinanceDraft] = useState(() => profileToFinanceDraft(profile));
 	const [healthcareDraft, setHealthcareDraft] = useState(() => profileToHealthcareDraft(profile));
@@ -113,7 +116,7 @@ export function WorkspaceToolsDialog({
 	const [documentBody, setDocumentBody] = useState('');
 	const [documentIncludeInRag, setDocumentIncludeInRag] = useState(true);
 	const [reportRequest, setReportRequest] = useState(() =>
-		buildDefaultFinanceReportRequest(profile.domainProfile)
+		buildDefaultFinanceReportRequest(profile.domainProfile, lang)
 	);
 	const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
 	const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -136,11 +139,11 @@ export function WorkspaceToolsDialog({
 		setTab(initialTab);
 		setFinanceDraft(profileToFinanceDraft(profile));
 		setHealthcareDraft(profileToHealthcareDraft(profile));
-		setReportRequest(buildDefaultFinanceReportRequest(profile.domainProfile));
+		setReportRequest(buildDefaultFinanceReportRequest(profile.domainProfile, lang));
 		setSelectedDocumentId(undefined);
 		setMessage(undefined);
 		setError(undefined);
-	}, [initialTab, open, profile]);
+	}, [initialTab, lang, open, profile]);
 
 	const updateFinance = <K extends keyof FinanceProfileDraft>(
 		field: K,
@@ -171,10 +174,10 @@ export function WorkspaceToolsDialog({
 				domainProfile,
 			};
 			await storeProfile(input);
-			setMessage('Session context updated.');
+			setMessage(text.contextSaved);
 		} catch (cause) {
 			console.error('Profile update failed:', cause);
-			setError('The session context could not be saved.');
+			setError(text.contextSaveFailed);
 		} finally {
 			setIsSavingProfile(false);
 		}
@@ -201,10 +204,10 @@ export function WorkspaceToolsDialog({
 			}
 			setDocumentTitle('');
 			setDocumentBody('');
-			setMessage('Reference saved as a draft. Approve it when it is ready for use.');
+			setMessage(text.draftSaved);
 		} catch (cause) {
 			console.error('Reference creation failed:', cause);
-			setError('The reference could not be created.');
+			setError(text.draftSaveFailed);
 		}
 	};
 
@@ -213,10 +216,10 @@ export function WorkspaceToolsDialog({
 		setMessage(undefined);
 		try {
 			await documentApi.approve({ documentId: document.documentId, sessionId: session.sessionId });
-			setMessage('Document approved.');
+			setMessage(text.documentApproved);
 		} catch (cause) {
 			console.error('Document approval failed:', cause);
-			setError('The document could not be approved.');
+			setError(text.documentApproveFailed);
 		}
 	};
 
@@ -238,7 +241,7 @@ export function WorkspaceToolsDialog({
 			}
 		} catch (cause) {
 			console.error('Retrieval preference update failed:', cause);
-			setError('The retrieval setting could not be updated.');
+			setError(text.retrievalUpdateFailed);
 		}
 	};
 
@@ -252,11 +255,11 @@ export function WorkspaceToolsDialog({
 				requestText: reportRequest.trim(),
 				modelName: DEFAULT_CHAT_MODEL,
 			});
-			setMessage('Finance report created as an output-only draft.');
+			setMessage(text.reportCreated);
 			setTab('documents');
 		} catch (cause) {
 			console.error('Finance report generation failed:', cause);
-			setError('The finance report could not be generated.');
+			setError(text.reportCreateFailed);
 		}
 	};
 
@@ -272,24 +275,24 @@ export function WorkspaceToolsDialog({
 				<DialogContent className="advisor-tools-dialog__content">
 					<header className="advisor-tools-dialog__header">
 						<div>
-							<span>WORKSPACE TOOLS</span>
+							<span>{text.workspaceTools}</span>
 							<h2>{config.shortTitle}</h2>
 						</div>
-						<Tooltip title="Close workspace tools">
-							<IconButton onClick={onClose} aria-label="Close workspace tools">
+						<Tooltip title={text.closeTools}>
+							<IconButton onClick={onClose} aria-label={text.closeTools}>
 								<CloseRounded />
 							</IconButton>
 						</Tooltip>
 					</header>
 
-					<nav className="advisor-tools-tabs" aria-label="Workspace tools">
+					<nav className="advisor-tools-tabs" aria-label={text.workspaceTools}>
 						<button
 							className={tab === 'profile' ? 'is-active' : ''}
 							type="button"
 							onClick={() => setTab('profile')}
 						>
 							<TuneRounded />
-							Session context
+							{text.profileTab}
 						</button>
 						<button
 							className={tab === 'documents' ? 'is-active' : ''}
@@ -297,7 +300,7 @@ export function WorkspaceToolsDialog({
 							onClick={() => setTab('documents')}
 						>
 							<DescriptionOutlined />
-							References
+							{text.documentsTab}
 							<span>{documents.length}</span>
 						</button>
 						{domain === 'finance' && (
@@ -307,7 +310,7 @@ export function WorkspaceToolsDialog({
 								onClick={() => setTab('report')}
 							>
 								<FactCheckOutlined />
-								Finance report
+								{text.reportTab}
 							</button>
 						)}
 					</nav>
@@ -316,21 +319,21 @@ export function WorkspaceToolsDialog({
 						{tab === 'profile' && (
 							<section className="advisor-tool-panel">
 								<div className="advisor-tool-panel__intro">
-									<span>CANONICAL SESSION PROFILE</span>
-									<h3>Set the context used to filter evidence.</h3>
-									<p>Blank fields remain explicitly missing and are never silently inferred.</p>
+									<span>{text.canonicalProfile}</span>
+									<h3>{text.profileHeading}</h3>
+									<p>{text.profileMissingNote}</p>
 								</div>
 								{domain === 'finance' ? (
 									<div className="advisor-form-grid">
 										<label className="advisor-field advisor-field--wide">
-											<span>Investment goal</span>
+											<span>{text.investmentGoal}</span>
 											<input
 												value={financeDraft.investmentGoal}
 												onChange={(event) => updateFinance('investmentGoal', event.target.value)}
 											/>
 										</label>
 										<label className="advisor-field">
-											<span>Horizon (months)</span>
+											<span>{text.horizonMonths}</span>
 											<input
 												type="number"
 												min="1"
@@ -339,7 +342,7 @@ export function WorkspaceToolsDialog({
 											/>
 										</label>
 										<label className="advisor-field">
-											<span>Liquidity need</span>
+											<span>{text.liquidityNeed}</span>
 											<select
 												value={financeDraft.liquidityNeed}
 												onChange={(event) =>
@@ -349,14 +352,14 @@ export function WorkspaceToolsDialog({
 													)
 												}
 											>
-												<option value="">Not provided</option>
-												<option value="high">High</option>
-												<option value="medium">Medium</option>
-												<option value="low">Low</option>
+												<option value="">{text.notProvided}</option>
+												<option value="high">{text.high}</option>
+												<option value="medium">{text.medium}</option>
+												<option value="low">{text.low}</option>
 											</select>
 										</label>
 										<label className="advisor-field">
-											<span>Risk preference</span>
+											<span>{text.riskPreference}</span>
 											<select
 												value={financeDraft.riskPreference}
 												onChange={(event) =>
@@ -366,14 +369,14 @@ export function WorkspaceToolsDialog({
 													)
 												}
 											>
-												<option value="">Not provided</option>
-												<option value="conservative">Conservative</option>
-												<option value="moderate">Moderate</option>
-												<option value="growth">Growth</option>
+												<option value="">{text.notProvided}</option>
+												<option value="conservative">{text.conservative}</option>
+												<option value="moderate">{text.moderate}</option>
+												<option value="growth">{text.growth}</option>
 											</select>
 										</label>
 										<label className="advisor-field advisor-field--wide">
-											<span>Constraints</span>
+											<span>{text.constraints}</span>
 											<input
 												value={financeDraft.constraints}
 												onChange={(event) => updateFinance('constraints', event.target.value)}
@@ -383,14 +386,14 @@ export function WorkspaceToolsDialog({
 								) : (
 									<div className="advisor-form-grid">
 										<label className="advisor-field advisor-field--wide">
-											<span>Workflow topic</span>
+											<span>{text.workflowTopic}</span>
 											<input
 												value={healthcareDraft.workflowTopic}
 												onChange={(event) => updateHealthcare('workflowTopic', event.target.value)}
 											/>
 										</label>
 										<label className="advisor-field">
-											<span>Requester role</span>
+											<span>{text.requesterRole}</span>
 											<select
 												value={healthcareDraft.requesterRole}
 												onChange={(event) =>
@@ -400,28 +403,28 @@ export function WorkspaceToolsDialog({
 													)
 												}
 											>
-												<option value="">Not provided</option>
-												<option value="patient_support">Patient support</option>
-												<option value="admin_staff">Administrative staff</option>
-												<option value="nurse">Nurse</option>
-												<option value="doctor">Doctor</option>
+												<option value="">{text.notProvided}</option>
+												<option value="patient_support">{text.patientSupport}</option>
+												<option value="admin_staff">{text.adminStaff}</option>
+												<option value="nurse">{text.nurse}</option>
+												<option value="doctor">{text.doctor}</option>
 											</select>
 										</label>
 										<label className="advisor-field">
-											<span>Urgency</span>
+											<span>{text.urgency}</span>
 											<select
 												value={healthcareDraft.urgency}
 												onChange={(event) =>
 													updateHealthcare('urgency', event.target.value as HealthcareProfileDraft['urgency'])
 												}
 											>
-												<option value="">Not provided</option>
-												<option value="routine">Routine</option>
-												<option value="time_sensitive">Time-sensitive</option>
+												<option value="">{text.notProvided}</option>
+												<option value="routine">{text.routine}</option>
+												<option value="time_sensitive">{text.timeSensitive}</option>
 											</select>
 										</label>
 										<label className="advisor-field advisor-field--wide">
-											<span>Constraints</span>
+											<span>{text.constraints}</span>
 											<input
 												value={healthcareDraft.constraints}
 												onChange={(event) => updateHealthcare('constraints', event.target.value)}
@@ -437,7 +440,7 @@ export function WorkspaceToolsDialog({
 										disabled={isSavingProfile}
 									>
 										<CheckRounded />
-										{isSavingProfile ? 'Saving…' : 'Save context'}
+										{isSavingProfile ? text.savingContext : text.saveContext}
 									</button>
 								</div>
 							</section>
@@ -446,28 +449,25 @@ export function WorkspaceToolsDialog({
 						{tab === 'documents' && (
 							<section className="advisor-tool-panel">
 								<div className="advisor-tool-panel__intro">
-									<span>SESSION KNOWLEDGE</span>
-									<h3>Add optional reference material.</h3>
-									<p>
-										Manual and generated Documents remain distinct. Retrieval requires approval and an
-										explicit RAG preference.
-									</p>
+									<span>{text.sessionKnowledge}</span>
+									<h3>{text.referenceHeading}</h3>
+									<p>{text.referenceNote}</p>
 								</div>
 								<div className="advisor-reference-create">
 									<label className="advisor-field">
-										<span>Reference title</span>
+										<span>{text.referenceTitle}</span>
 										<input
 											value={documentTitle}
 											onChange={(event) => setDocumentTitle(event.target.value)}
-											placeholder="Fictional session reference"
+											placeholder={text.referenceTitlePlaceholder}
 										/>
 									</label>
 									<label className="advisor-field">
-										<span>Reference body</span>
+										<span>{text.referenceBody}</span>
 										<textarea
 											value={documentBody}
 											onChange={(event) => setDocumentBody(event.target.value)}
-											placeholder="Paste fictional reference text only."
+											placeholder={text.referenceBodyPlaceholder}
 											rows={5}
 										/>
 									</label>
@@ -478,7 +478,7 @@ export function WorkspaceToolsDialog({
 												checked={documentIncludeInRag}
 												onChange={(event) => setDocumentIncludeInRag(event.target.checked)}
 											/>
-											Request inclusion in RAG after approval
+											{text.requestRag}
 										</label>
 										<button
 											className="advisor-button advisor-button--primary"
@@ -487,29 +487,29 @@ export function WorkspaceToolsDialog({
 											disabled={documentApi.isMutating || !documentTitle.trim() || !documentBody.trim()}
 										>
 											<PostAddRounded />
-											Save draft
+											{text.saveDraft}
 										</button>
 									</div>
 								</div>
 
 								<div className="advisor-document-list">
 									{documentQuery.isLoading ? (
-										<p>Loading references…</p>
+										<p>{text.loadingReferences}</p>
 									) : documents.length ? (
 										documents.map((document) => (
 											<article key={document.documentId}>
 												<div className="advisor-document-list__heading">
 													<div>
-														<span>{document.origin === 'manual' ? 'MANUAL' : 'GENERATED'}</span>
+														<span>{document.origin === 'manual' ? text.manual : text.generated}</span>
 														<h4>{document.title}</h4>
 													</div>
 													<span
 														className={`advisor-document-status advisor-document-status--${document.status}`}
 													>
-														{documentStatusLabel(document)}
+														{documentStatusLabel(document, text)}
 													</span>
 												</div>
-												<p>{document.body.slice(0, 240) || 'Empty draft'}</p>
+												<p>{document.body.slice(0, 240) || text.emptyDraft}</p>
 												<div className="advisor-document-list__footer">
 													<label className="advisor-check-field">
 														<input
@@ -518,12 +518,12 @@ export function WorkspaceToolsDialog({
 															disabled={document.status === 'archived' || documentApi.isMutating}
 															onChange={(event) => void toggleDocumentRetrieval(document, event.target.checked)}
 														/>
-														Include in RAG
+														{text.includeInRag}
 													</label>
 													<div className="advisor-document-list__actions">
 														<button type="button" onClick={() => setSelectedDocumentId(document.documentId)}>
 															<VisibilityOutlined />
-															{document.status === 'draft' ? 'Read draft' : 'Read document'}
+															{document.status === 'draft' ? text.readDraft : text.readDocument}
 														</button>
 														{document.status === 'draft' && (
 															<button
@@ -531,7 +531,7 @@ export function WorkspaceToolsDialog({
 																onClick={() => void approveDocument(document)}
 																disabled={documentApi.isMutating}
 															>
-																Approve
+																{text.approve}
 															</button>
 														)}
 													</div>
@@ -539,7 +539,7 @@ export function WorkspaceToolsDialog({
 											</article>
 										))
 									) : (
-										<p>No session references or reports yet.</p>
+										<p>{text.noReferences}</p>
 									)}
 								</div>
 							</section>
@@ -548,25 +548,19 @@ export function WorkspaceToolsDialog({
 						{tab === 'report' && domain === 'finance' && (
 							<section className="advisor-tool-panel advisor-report-panel">
 								<div className="advisor-tool-panel__intro">
-									<span>TRACEABLE OUTPUT</span>
-									<h3>Generate a personalized finance report.</h3>
-									<p>
-										The report uses the current request, Profile, eligible chat memory, Lore, and approved
-										session Documents. It is output-only by default.
-									</p>
+									<span>{text.traceableOutput}</span>
+									<h3>{text.reportHeading}</h3>
+									<p>{text.reportNote}</p>
 								</div>
 								<div className="advisor-report-card">
 									<FactCheckOutlined />
 									<div>
-										<strong>Evidence-grounded report</strong>
-										<span>
-											Up to three fictional products with citations, suitability notes, missing information,
-											and the fixed demo disclaimer.
-										</span>
+										<strong>{text.evidenceGroundedReport}</strong>
+										<span>{text.reportCardNote}</span>
 									</div>
 								</div>
 								<label className="advisor-field">
-									<span>Report request</span>
+									<span>{text.reportRequest}</span>
 									<textarea
 										value={reportRequest}
 										onChange={(event) => setReportRequest(event.target.value)}
@@ -581,7 +575,7 @@ export function WorkspaceToolsDialog({
 										disabled={documentApi.isGenerating || !reportRequest.trim()}
 									>
 										<FactCheckOutlined />
-										{documentApi.isGenerating ? 'Generating…' : 'Generate report'}
+										{documentApi.isGenerating ? text.generatingReport : text.generateReport}
 									</button>
 								</div>
 							</section>
@@ -605,11 +599,13 @@ export function WorkspaceToolsDialog({
 					<DialogContent className="advisor-document-reader__content">
 						<header className="advisor-document-reader__header">
 							<div>
-								<span>{selectedDocument.origin === 'manual' ? 'MANUAL DOCUMENT' : 'GENERATED REPORT'}</span>
+								<span>
+									{selectedDocument.origin === 'manual' ? text.manualDocument : text.generatedReport}
+								</span>
 								<h2>{selectedDocument.title}</h2>
 							</div>
-							<Tooltip title="Close document">
-								<IconButton onClick={() => setSelectedDocumentId(undefined)} aria-label="Close document">
+							<Tooltip title={text.closeReader}>
+								<IconButton onClick={() => setSelectedDocumentId(undefined)} aria-label={text.closeReader}>
 									<CloseRounded />
 								</IconButton>
 							</Tooltip>
@@ -622,9 +618,9 @@ export function WorkspaceToolsDialog({
 								<span
 									className={`advisor-document-status advisor-document-status--${selectedDocument.status}`}
 								>
-									{documentStatusLabel(selectedDocument)}
+									{documentStatusLabel(selectedDocument, text)}
 								</span>
-								<small>Review the complete document before changing its approval or RAG status.</small>
+								<small>{text.reviewComplete}</small>
 							</div>
 							{selectedDocument.status === 'draft' && (
 								<button
@@ -634,7 +630,7 @@ export function WorkspaceToolsDialog({
 									disabled={documentApi.isMutating}
 								>
 									<CheckRounded />
-									Approve document
+									{text.approveDocument}
 								</button>
 							)}
 						</footer>

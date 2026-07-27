@@ -39,6 +39,7 @@ import {
 } from '../../hook/api/index.js';
 import { useChatState } from '../../hook/state/useChatState.js';
 import { useAuth } from '../../provider/AuthProvider.jsx';
+import { useLanguage } from '../../provider/LanguageProvider.js';
 import { parseEntriesToText, parseTextToEntries } from '../../util/chatParseUtils.js';
 import {
 	buildFinanceDomainProfile,
@@ -55,98 +56,98 @@ import {
 	WORKSPACE_DOMAINS,
 } from './workspaceConfig.js';
 import { WorkspaceToolsDialog, type WorkspaceToolTab } from './WorkspaceToolsDialog.js';
+import { getWorkspaceCopy, getWorkspaceDomainConfig } from './workspaceI18n.js';
 import './advisorWorkspace.css';
-
-const stageLabels: Record<ChatGenerationStage, string> = {
-	preparing: 'Preparing',
-	retrieving: 'Finding evidence',
-	generating: 'Drafting guidance',
-	saving: 'Saving response',
-};
 
 const DomainIcon = ({ domain }: { domain: AssistantDomain }) =>
 	domain === 'finance' ? <AccountBalanceOutlined /> : <LocalHospitalOutlined />;
 
-const formatSessionDate = (value: string): string => {
+const formatSessionDate = (value: string, lang: 'kor' | 'eng'): string => {
 	const date = new Date(value);
 	if (Number.isNaN(date.valueOf())) return '';
-	return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(date);
+	return new Intl.DateTimeFormat(lang === 'kor' ? 'ko-KR' : 'en', {
+		month: 'short',
+		day: 'numeric',
+	}).format(date);
 };
 
-const WorkspaceLogin = ({ onLogin }: { onLogin: () => void }) => (
-	<div className="advisor-landing">
-		<header className="advisor-landing__nav">
-			<a className="advisor-wordmark" href="/" aria-label="Grounded home">
-				<span className="advisor-wordmark__mark">G</span>
-				<span>grounded</span>
-			</a>
-			<button className="advisor-button advisor-button--ghost" type="button" onClick={onLogin}>
-				Sign in
-			</button>
-		</header>
-		<main className="advisor-landing__main">
-			<div className="advisor-landing__copy">
-				<p className="advisor-kicker">
-					<span />
-					Evidence-first guidance
-				</p>
-				<h1>
-					Ask better questions.
-					<br />
-					See what shaped the answer.
-				</h1>
-				<p className="advisor-landing__lede">
-					A public RAG demonstration for exploring fictional finance products and healthcare
-					operations—grounded in inspectable source material.
-				</p>
-				<div className="advisor-landing__actions">
-					<button className="advisor-button advisor-button--primary" type="button" onClick={onLogin}>
-						Open the workspace
-						<ArrowForwardRounded />
+const WorkspaceLogin = ({ onLogin }: { onLogin: () => void }) => {
+	const { lang, toggleLang } = useLanguage();
+	const text = getWorkspaceCopy(lang);
+	return (
+		<div className="advisor-landing">
+			<header className="advisor-landing__nav">
+				<a className="advisor-wordmark" href="/" aria-label="Grounded home">
+					<span className="advisor-wordmark__mark">G</span>
+					<span>grounded</span>
+				</a>
+				<div className="advisor-landing__nav-actions">
+					<button className="advisor-language-toggle" type="button" onClick={toggleLang}>
+						{lang === 'kor' ? 'EN · English' : '한 · 한국어'}
 					</button>
-					<span>No real financial, patient, or organizational data.</span>
+					<button className="advisor-button advisor-button--ghost" type="button" onClick={onLogin}>
+						{text.signIn}
+					</button>
 				</div>
-			</div>
-			<div className="advisor-landing__preview" aria-label="Workspace preview">
-				<div className="advisor-preview__header">
-					<span>LIVE EVIDENCE PREVIEW</span>
-					<span className="advisor-status-dot">Grounded</span>
-				</div>
-				<div className="advisor-preview__question">
-					<span>01</span>
-					<p>Which fictional option best fits a moderate risk preference and a three-year horizon?</p>
-				</div>
-				<div className="advisor-preview__answer">
-					<div className="advisor-preview__answer-mark">
-						<AutoAwesomeRounded />
-					</div>
-					<div>
-						<span>GUIDANCE</span>
-						<p>
-							The evidence supports comparing the Harbor Income Note with the Summit Growth Portfolio,
-							while keeping their liquidity differences explicit.
-						</p>
-					</div>
-				</div>
-				<div className="advisor-preview__sources">
-					<div>
-						<FactCheckOutlined />
-						<span>3 eligible sources</span>
-					</div>
-					<div>
-						<ShieldOutlined />
-						<span>2 suitability filters</span>
+			</header>
+			<main className="advisor-landing__main">
+				<div className="advisor-landing__copy">
+					<p className="advisor-kicker">
+						<span />
+						{text.evidenceFirst}
+					</p>
+					<h1>
+						{text.heroLine1}
+						<br />
+						{text.heroLine2}
+					</h1>
+					<p className="advisor-landing__lede">{text.landingDescription}</p>
+					<div className="advisor-landing__actions">
+						<button className="advisor-button advisor-button--primary" type="button" onClick={onLogin}>
+							{text.openWorkspace}
+							<ArrowForwardRounded />
+						</button>
+						<span>{text.noRealData}</span>
 					</div>
 				</div>
-			</div>
-		</main>
-		<footer className="advisor-landing__footer">
-			<span>FICTIONAL DEMO</span>
-			<span>FINANCE × HEALTHCARE OPERATIONS</span>
-			<span>BUILT FOR TRACEABILITY</span>
-		</footer>
-	</div>
-);
+				<div className="advisor-landing__preview" aria-label="Workspace preview">
+					<div className="advisor-preview__header">
+						<span>{text.livePreview}</span>
+						<span className="advisor-status-dot">Grounded</span>
+					</div>
+					<div className="advisor-preview__question">
+						<span>01</span>
+						<p>{text.previewQuestion}</p>
+					</div>
+					<div className="advisor-preview__answer">
+						<div className="advisor-preview__answer-mark">
+							<AutoAwesomeRounded />
+						</div>
+						<div>
+							<span>{text.guidance}</span>
+							<p>{text.previewAnswer}</p>
+						</div>
+					</div>
+					<div className="advisor-preview__sources">
+						<div>
+							<FactCheckOutlined />
+							<span>{text.eligibleSources}</span>
+						</div>
+						<div>
+							<ShieldOutlined />
+							<span>{text.suitabilityFilters}</span>
+						</div>
+					</div>
+				</div>
+			</main>
+			<footer className="advisor-landing__footer">
+				<span>{text.fictionalDemo.toUpperCase()}</span>
+				<span>{text.financeHealthcare}</span>
+				<span>{text.builtForTraceability}</span>
+			</footer>
+		</div>
+	);
+};
 
 type NewSessionPanelProps = {
 	domain: AssistantDomain;
@@ -155,8 +156,10 @@ type NewSessionPanelProps = {
 };
 
 const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProps) => {
+	const { lang } = useLanguage();
+	const text = getWorkspaceCopy(lang);
 	const navigate = useNavigate();
-	const config = WORKSPACE_DOMAINS[domain];
+	const config = getWorkspaceDomainConfig(domain, lang);
 	const characterId = DEMO_CHARACTER_IDS[domain];
 	const { data: characterResponse, isLoading: isCharacterLoading } =
 		useCharacterApi().getCharacter(characterId);
@@ -180,7 +183,7 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 	const createWorkspace = async () => {
 		const character = characterResponse?.characterInfo;
 		if (!character || character.domain !== domain) {
-			setError('The selected demo assistant is not ready.');
+			setError(text.assistantNotReady);
 			return;
 		}
 		setError(undefined);
@@ -202,7 +205,7 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 			navigate(`/workspace/${sessionId}`);
 		} catch (cause) {
 			console.error('Workspace creation failed:', cause);
-			setError('The workspace could not be created. Please try again.');
+			setError(text.workspaceCreateFailed);
 		} finally {
 			setIsCreating(false);
 		}
@@ -213,18 +216,15 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 			<div className="advisor-start__intro">
 				<p className="advisor-kicker">
 					<span />
-					New exploration
+					{text.newExploration}
 				</p>
-				<h1>Choose a domain, then add only the context that matters.</h1>
-				<p>
-					Your profile guides evidence filtering. Missing fields stay visible instead of being silently
-					invented.
-				</p>
+				<h1>{text.newIntroTitle}</h1>
+				<p>{text.newIntroBody}</p>
 			</div>
 
 			<div className="advisor-domain-grid">
 				{(Object.keys(WORKSPACE_DOMAINS) as AssistantDomain[]).map((itemDomain) => {
-					const item = WORKSPACE_DOMAINS[itemDomain];
+					const item = getWorkspaceDomainConfig(itemDomain, lang);
 					const selected = itemDomain === domain;
 					return (
 						<button
@@ -257,27 +257,29 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 			>
 				<div className="advisor-profile-builder__heading">
 					<div>
-						<span>SESSION PROFILE</span>
-						<h2>{config.shortTitle} context</h2>
+						<span>{text.sessionProfile}</span>
+						<h2>
+							{config.shortTitle} {text.contextSuffix}
+						</h2>
 					</div>
 					<span className="advisor-optional-badge">
 						<TuneRounded />
-						Editable per session
+						{text.editablePerSession}
 					</span>
 				</div>
 
 				{domain === 'finance' ? (
 					<div className="advisor-form-grid">
 						<label className="advisor-field advisor-field--wide">
-							<span>What are you trying to accomplish?</span>
+							<span>{text.goalQuestion}</span>
 							<input
 								value={financeDraft.investmentGoal}
 								onChange={(event) => updateFinance('investmentGoal', event.target.value)}
-								placeholder="e.g. Build a fictional emergency reserve"
+								placeholder={text.goalPlaceholder}
 							/>
 						</label>
 						<label className="advisor-field">
-							<span>Time horizon</span>
+							<span>{text.timeHorizon}</span>
 							<div className="advisor-input-suffix">
 								<input
 									type="number"
@@ -286,25 +288,25 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 									onChange={(event) => updateFinance('investmentHorizonMonths', event.target.value)}
 									placeholder="36"
 								/>
-								<small>months</small>
+								<small>{text.months}</small>
 							</div>
 						</label>
 						<label className="advisor-field">
-							<span>Liquidity need</span>
+							<span>{text.liquidityNeed}</span>
 							<select
 								value={financeDraft.liquidityNeed}
 								onChange={(event) =>
 									updateFinance('liquidityNeed', event.target.value as FinanceProfileDraft['liquidityNeed'])
 								}
 							>
-								<option value="">Not provided</option>
-								<option value="high">High</option>
-								<option value="medium">Medium</option>
-								<option value="low">Low</option>
+								<option value="">{text.notProvided}</option>
+								<option value="high">{text.high}</option>
+								<option value="medium">{text.medium}</option>
+								<option value="low">{text.low}</option>
 							</select>
 						</label>
 						<label className="advisor-field">
-							<span>Risk preference</span>
+							<span>{text.riskPreference}</span>
 							<select
 								value={financeDraft.riskPreference}
 								onChange={(event) =>
@@ -314,33 +316,33 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 									)
 								}
 							>
-								<option value="">Not provided</option>
-								<option value="conservative">Conservative</option>
-								<option value="moderate">Moderate</option>
-								<option value="growth">Growth</option>
+								<option value="">{text.notProvided}</option>
+								<option value="conservative">{text.conservative}</option>
+								<option value="moderate">{text.moderate}</option>
+								<option value="growth">{text.growth}</option>
 							</select>
 						</label>
 						<label className="advisor-field advisor-field--wide">
-							<span>Constraints</span>
+							<span>{text.constraints}</span>
 							<input
 								value={financeDraft.constraints}
 								onChange={(event) => updateFinance('constraints', event.target.value)}
-								placeholder="Comma-separated, optional"
+								placeholder={text.optionalComma}
 							/>
 						</label>
 					</div>
 				) : (
 					<div className="advisor-form-grid">
 						<label className="advisor-field advisor-field--wide">
-							<span>Workflow topic</span>
+							<span>{text.workflowTopic}</span>
 							<input
 								value={healthcareDraft.workflowTopic}
 								onChange={(event) => updateHealthcare('workflowTopic', event.target.value)}
-								placeholder="e.g. Billing inquiry"
+								placeholder={text.workflowPlaceholder}
 							/>
 						</label>
 						<label className="advisor-field">
-							<span>Requester role</span>
+							<span>{text.requesterRole}</span>
 							<select
 								value={healthcareDraft.requesterRole}
 								onChange={(event) =>
@@ -350,32 +352,32 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 									)
 								}
 							>
-								<option value="">Not provided</option>
-								<option value="patient_support">Patient support</option>
-								<option value="admin_staff">Administrative staff</option>
-								<option value="nurse">Nurse</option>
-								<option value="doctor">Doctor</option>
+								<option value="">{text.notProvided}</option>
+								<option value="patient_support">{text.patientSupport}</option>
+								<option value="admin_staff">{text.adminStaff}</option>
+								<option value="nurse">{text.nurse}</option>
+								<option value="doctor">{text.doctor}</option>
 							</select>
 						</label>
 						<label className="advisor-field">
-							<span>Urgency</span>
+							<span>{text.urgency}</span>
 							<select
 								value={healthcareDraft.urgency}
 								onChange={(event) =>
 									updateHealthcare('urgency', event.target.value as HealthcareProfileDraft['urgency'])
 								}
 							>
-								<option value="">Not provided</option>
-								<option value="routine">Routine</option>
-								<option value="time_sensitive">Time-sensitive</option>
+								<option value="">{text.notProvided}</option>
+								<option value="routine">{text.routine}</option>
+								<option value="time_sensitive">{text.timeSensitive}</option>
 							</select>
 						</label>
 						<label className="advisor-field advisor-field--wide">
-							<span>Operational constraints</span>
+							<span>{text.operationalConstraints}</span>
 							<input
 								value={healthcareDraft.constraints}
 								onChange={(event) => updateHealthcare('constraints', event.target.value)}
-								placeholder="Comma-separated, optional"
+								placeholder={text.optionalComma}
 							/>
 						</label>
 					</div>
@@ -384,7 +386,7 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 				<div className="advisor-profile-builder__footer">
 					<p>
 						<ShieldOutlined />
-						Use fictional demo details only.
+						{text.useFictional}
 					</p>
 					<div>
 						{error && <span className="advisor-inline-error">{error}</span>}
@@ -394,7 +396,7 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 							onClick={createWorkspace}
 							disabled={isCreating || isCharacterLoading}
 						>
-							{isCreating ? 'Creating workspace…' : 'Start exploration'}
+							{isCreating ? text.creatingWorkspace : text.startExploration}
 							<ArrowForwardRounded />
 						</button>
 					</div>
@@ -413,23 +415,25 @@ const EvidenceInspector = ({
 	evidence?: RagEvidenceDto;
 	domain: AssistantDomain;
 }) => {
-	const config = WORKSPACE_DOMAINS[domain];
-	const profileSummary = summarizeDomainProfile(profile?.domainProfile);
-	const evidenceKinds = countEvidenceKinds(evidence);
+	const { lang } = useLanguage();
+	const text = getWorkspaceCopy(lang);
+	const config = getWorkspaceDomainConfig(domain, lang);
+	const profileSummary = summarizeDomainProfile(profile?.domainProfile, lang);
+	const evidenceKinds = countEvidenceKinds(evidence, lang);
 	return (
 		<aside className="advisor-inspector">
 			<div className="advisor-inspector__top">
-				<span>TRACE</span>
+				<span>{text.trace}</span>
 				<span className={`advisor-live-state${evidence ? ' is-active' : ''}`}>
 					<i />
-					{evidence ? 'Evidence ready' : 'Awaiting question'}
+					{evidence ? text.evidenceReady : text.awaitingQuestion}
 				</span>
 			</div>
 
 			<section className="advisor-inspector__section">
 				<div className="advisor-inspector__title">
 					<TuneRounded />
-					<h3>Session context</h3>
+					<h3>{text.contextFull}</h3>
 				</div>
 				<div className="advisor-profile-summary">
 					{profileSummary.map((item) => (
@@ -444,7 +448,7 @@ const EvidenceInspector = ({
 			<section className="advisor-inspector__section">
 				<div className="advisor-inspector__title">
 					<FactCheckOutlined />
-					<h3>Retrieved evidence</h3>
+					<h3>{text.retrievedEvidence}</h3>
 				</div>
 				{evidence?.items.length ? (
 					<>
@@ -463,7 +467,9 @@ const EvidenceInspector = ({
 									<div>
 										<strong>{item.label}</strong>
 										<small>
-											{item.origin ? `${item.origin} document` : item.sourceKind.replaceAll('_', ' ')}
+											{item.origin
+												? `${item.origin === 'manual' ? text.manual : text.generated} ${text.document}`
+												: item.sourceKind.replaceAll('_', ' ')}
 										</small>
 									</div>
 								</li>
@@ -471,9 +477,7 @@ const EvidenceInspector = ({
 						</ul>
 					</>
 				) : (
-					<p className="advisor-inspector__empty">
-						Sources, exclusions, and assumptions will appear after the first response.
-					</p>
+					<p className="advisor-inspector__empty">{text.noEvidence}</p>
 				)}
 			</section>
 
@@ -481,19 +485,19 @@ const EvidenceInspector = ({
 				<section className="advisor-inspector__section">
 					<div className="advisor-inspector__title">
 						<ShieldOutlined />
-						<h3>Decision notes</h3>
+						<h3>{text.decisionNotes}</h3>
 					</div>
 					<div className="advisor-note-stack">
 						<div>
-							<span>Missing information</span>
+							<span>{text.missingInformation}</span>
 							<strong>{evidence.missingInformation.length}</strong>
 						</div>
 						<div>
-							<span>Explicit assumptions</span>
+							<span>{text.explicitAssumptions}</span>
 							<strong>{evidence.assumptions.length}</strong>
 						</div>
 						<div>
-							<span>Excluded source groups</span>
+							<span>{text.excludedGroups}</span>
 							<strong>{evidence.excluded.length}</strong>
 						</div>
 					</div>
@@ -510,8 +514,10 @@ const ConversationWorkspace = ({
 	session: SessionInfo;
 	profile: ProfileInfo;
 }) => {
+	const { lang } = useLanguage();
+	const text = getWorkspaceCopy(lang);
 	const domain = getSessionDomain(session) ?? profile.domainProfile?.domain ?? 'finance';
-	const config = WORKSPACE_DOMAINS[domain];
+	const config = getWorkspaceDomainConfig(domain, lang);
 	const { userId } = useAuth();
 	const {
 		chatTurns,
@@ -606,7 +612,7 @@ const ConversationWorkspace = ({
 			if (!controller.signal.aborted) {
 				console.error('Guidance request failed:', cause);
 				setInput(trimmed);
-				setError(cause instanceof Error ? cause.message : 'The response could not be generated.');
+				setError(cause instanceof Error ? cause.message : text.taskFailed);
 			}
 		} finally {
 			if (abortRef.current === controller) abortRef.current = undefined;
@@ -651,37 +657,33 @@ const ConversationWorkspace = ({
 							<h1>{session.title}</h1>
 						</div>
 						<div className="advisor-conversation__actions">
-							<Tooltip title="Session context">
-								<button type="button" onClick={() => openTools('profile')} aria-label="Session context">
+							<Tooltip title={text.contextFull}>
+								<button type="button" onClick={() => openTools('profile')} aria-label={text.contextFull}>
 									<TuneRounded />
-									<span>Context</span>
+									<span>{text.context}</span>
 								</button>
 							</Tooltip>
-							<Tooltip title="Session references">
-								<button
-									type="button"
-									onClick={() => openTools('documents')}
-									aria-label="Session references"
-								>
+							<Tooltip title={text.references}>
+								<button type="button" onClick={() => openTools('documents')} aria-label={text.references}>
 									<DescriptionOutlined />
-									<span>References</span>
+									<span>{text.references}</span>
 								</button>
 							</Tooltip>
 							{domain === 'finance' && (
-								<Tooltip title="Finance report">
-									<button type="button" onClick={() => openTools('report')} aria-label="Finance report">
+								<Tooltip title={text.report}>
+									<button type="button" onClick={() => openTools('report')} aria-label={text.report}>
 										<FactCheckOutlined />
-										<span>Report</span>
+										<span>{text.report}</span>
 									</button>
 								</Tooltip>
 							)}
-							<span className="advisor-demo-badge">Fictional demo</span>
+							<span className="advisor-demo-badge">{text.fictionalDemo}</span>
 						</div>
 					</header>
 
 					<div className="advisor-thread" aria-live="polite">
 						{isLoadingHistory ? (
-							<div className="advisor-thread__loading">Loading the exploration…</div>
+							<div className="advisor-thread__loading">{text.loadingExploration}</div>
 						) : displayTurns.length === 0 && !isProcessing ? (
 							<div className="advisor-empty-thread">
 								<div
@@ -690,7 +692,7 @@ const ConversationWorkspace = ({
 								>
 									<DomainIcon domain={domain} />
 								</div>
-								<span>START WITH A QUESTION</span>
+								<span>{text.startQuestion}</span>
 								<h2>{config.title}</h2>
 								<p>{config.description}</p>
 								<div className="advisor-prompt-list">
@@ -708,7 +710,7 @@ const ConversationWorkspace = ({
 									<div className="advisor-turn__index">{(index + 1).toString().padStart(2, '0')}</div>
 									<div className="advisor-turn__content">
 										<div className="advisor-message advisor-message--user">
-											<span>YOUR QUESTION</span>
+											<span>{text.yourQuestion}</span>
 											<p>{parseEntriesToText(turn.request.entries)}</p>
 										</div>
 										<div className="advisor-message advisor-message--assistant">
@@ -716,7 +718,7 @@ const ConversationWorkspace = ({
 												<span className="advisor-assistant-mark">
 													<AutoAwesomeRounded />
 												</span>
-												<span>GROUNDED GUIDANCE</span>
+												<span>{text.groundedGuidance}</span>
 											</div>
 											<div className="advisor-response-copy">{parseEntriesToText(turn.response.entries)}</div>
 										</div>
@@ -730,18 +732,18 @@ const ConversationWorkspace = ({
 								<div className="advisor-turn__index">··</div>
 								<div className="advisor-turn__content">
 									<div className="advisor-message advisor-message--user">
-										<span>YOUR QUESTION</span>
-										<p>{input || 'Request submitted'}</p>
+										<span>{text.yourQuestion}</span>
+										<p>{input || text.requestSubmitted}</p>
 									</div>
 									<div className="advisor-message advisor-message--assistant">
 										<div className="advisor-message__label">
 											<span className="advisor-assistant-mark is-pulsing">
 												<AutoAwesomeRounded />
 											</span>
-											<span>{stage ? stageLabels[stage].toUpperCase() : 'WORKING'}</span>
+											<span>{stage ? text[stage].toUpperCase() : text.working}</span>
 										</div>
 										<div className="advisor-response-copy advisor-response-copy--streaming">
-											{streamingText || 'Reviewing the eligible evidence…'}
+											{streamingText || text.reviewingEvidence}
 										</div>
 									</div>
 								</div>
@@ -753,7 +755,7 @@ const ConversationWorkspace = ({
 						{error && <div className="advisor-composer-error">{error}</div>}
 						<div className="advisor-composer">
 							<textarea
-								aria-label="Ask a grounded question"
+								aria-label={text.taskQuestionLabel}
 								value={input}
 								onChange={(event) => setInput(event.target.value)}
 								onKeyDown={(event) => {
@@ -762,34 +764,34 @@ const ConversationWorkspace = ({
 										void sendMessage();
 									}
 								}}
-								placeholder={`Ask about ${config.shortTitle.toLowerCase()}…`}
+								placeholder={domain === 'finance' ? text.askFinance : text.askHealthcare}
 								rows={2}
 							/>
 							<div className="advisor-composer__footer">
 								<span className="advisor-composer-hint">
 									<ShieldOutlined />
-									Fictional demo data only
+									{text.fictionalOnly}
 								</span>
 								{isProcessing ? (
-									<Tooltip title="Cancel response">
+									<Tooltip title={text.cancel}>
 										<button
 											className="advisor-send-button is-cancel"
 											type="button"
 											onClick={() => abortRef.current?.abort()}
-											aria-label="Cancel response"
+											aria-label={text.cancel}
 										>
 											<CloseRounded />
 										</button>
 									</Tooltip>
 								) : (
-									<Tooltip title="Send question">
+									<Tooltip title={text.send}>
 										<span className="advisor-send-tooltip">
 											<button
 												className="advisor-send-button"
 												type="button"
 												onClick={() => void sendMessage()}
 												disabled={!input.trim()}
-												aria-label="Send question"
+												aria-label={text.send}
 											>
 												<ArrowUpwardRounded />
 											</button>
@@ -799,9 +801,7 @@ const ConversationWorkspace = ({
 							</div>
 						</div>
 						<p className="advisor-disclaimer">
-							{domain === 'finance'
-								? 'Educational demo only—not financial advice. Products and outcomes are fictional.'
-								: 'Administrative demo only—not medical advice. Facilities and workflows are fictional.'}
+							{domain === 'finance' ? text.financeDisclaimer : text.healthcareDisclaimer}
 						</p>
 					</div>
 				</main>
@@ -826,6 +826,8 @@ const WorkspaceRoute = ({
 	selectedDomain: AssistantDomain;
 	onDomainChange: (domain: AssistantDomain) => void;
 }) => {
+	const { lang } = useLanguage();
+	const text = getWorkspaceCopy(lang);
 	const { sessionId = '' } = useParams();
 	const { userId } = useAuth();
 	const {
@@ -845,7 +847,7 @@ const WorkspaceRoute = ({
 		);
 	}
 	if (sessionLoading || profileLoading) {
-		return <div className="advisor-route-state">Loading the workspace…</div>;
+		return <div className="advisor-route-state">{text.loadingWorkspace}</div>;
 	}
 	if (
 		sessionError ||
@@ -855,8 +857,8 @@ const WorkspaceRoute = ({
 	) {
 		return (
 			<div className="advisor-route-state advisor-route-state--error">
-				<strong>This exploration could not be loaded.</strong>
-				<span>Return to the workspace and choose another session.</span>
+				<strong>{text.loadFailed}</strong>
+				<span>{text.loadFailedHint}</span>
 			</div>
 		);
 	}
@@ -871,6 +873,8 @@ const WorkspaceRoute = ({
 
 export function AdvisorWorkspacePage() {
 	const navigate = useNavigate();
+	const { lang, toggleLang } = useLanguage();
+	const text = getWorkspaceCopy(lang);
 	const { sessionId } = useParams();
 	const {
 		isSessionLoading,
@@ -901,7 +905,7 @@ export function AdvisorWorkspacePage() {
 	}, [sessionId, supportedSessions]);
 
 	if (isSessionLoading) {
-		return <div className="advisor-route-state advisor-route-state--full">Opening Grounded…</div>;
+		return <div className="advisor-route-state advisor-route-state--full">{text.opening}</div>;
 	}
 	if (!isLoggedIn) {
 		return (
@@ -914,10 +918,10 @@ export function AdvisorWorkspacePage() {
 					fullWidth
 					slotProps={{ paper: { className: 'advisor-auth-dialog' } }}
 				>
-					<Tooltip title="Close sign in">
+					<Tooltip title={text.closeSignIn}>
 						<IconButton
 							onClick={closeLoginModal}
-							aria-label="Close sign in"
+							aria-label={text.closeSignIn}
 							sx={{ position: 'absolute', right: 10, top: 10, zIndex: 2 }}
 						>
 							<CloseRounded />
@@ -942,12 +946,12 @@ export function AdvisorWorkspacePage() {
 						<span className="advisor-wordmark__mark">G</span>
 						<span>grounded</span>
 					</button>
-					<Tooltip title="Close navigation">
+					<Tooltip title={text.closeNavigation}>
 						<button
 							className="advisor-mobile-close"
 							type="button"
 							onClick={() => setMobileMenuOpen(false)}
-							aria-label="Close menu"
+							aria-label={text.closeNavigation}
 						>
 							<CloseRounded />
 						</button>
@@ -963,11 +967,19 @@ export function AdvisorWorkspacePage() {
 					}}
 				>
 					<AddRounded />
-					New exploration
+					{text.newExploration}
 				</button>
 
-				<nav className="advisor-domain-nav" aria-label="Domains">
-					<span>DOMAINS</span>
+				<button
+					className="advisor-language-toggle advisor-language-toggle--sidebar"
+					type="button"
+					onClick={toggleLang}
+				>
+					{lang === 'kor' ? 'EN · English' : '한 · 한국어'}
+				</button>
+
+				<nav className="advisor-domain-nav" aria-label={text.domains}>
+					<span>{text.domains.toUpperCase()}</span>
 					{(Object.keys(WORKSPACE_DOMAINS) as AssistantDomain[]).map((domain) => (
 						<button
 							className={selectedDomain === domain ? 'is-active' : ''}
@@ -980,13 +992,13 @@ export function AdvisorWorkspacePage() {
 							}}
 						>
 							<DomainIcon domain={domain} />
-							<span>{WORKSPACE_DOMAINS[domain].shortTitle}</span>
+							<span>{getWorkspaceDomainConfig(domain, lang).shortTitle}</span>
 						</button>
 					))}
 				</nav>
 
 				<div className="advisor-session-nav">
-					<span>RECENT EXPLORATIONS</span>
+					<span>{text.recent.toUpperCase()}</span>
 					<div>
 						{supportedSessions.length ? (
 							supportedSessions.map((session) => {
@@ -1004,13 +1016,13 @@ export function AdvisorWorkspacePage() {
 										<i style={{ background: WORKSPACE_DOMAINS[domain].accent }} />
 										<span>
 											<strong>{session.title}</strong>
-											<small>{formatSessionDate(session.updatedAt)}</small>
+											<small>{formatSessionDate(session.updatedAt, lang)}</small>
 										</span>
 									</button>
 								);
 							})
 						) : (
-							<p>No explorations yet.</p>
+							<p>{text.none}</p>
 						)}
 					</div>
 				</div>
@@ -1018,11 +1030,11 @@ export function AdvisorWorkspacePage() {
 				<div className="advisor-sidebar__account">
 					<span className="advisor-avatar">{initials}</span>
 					<div>
-						<strong>{userProfile?.showName || 'Demo user'}</strong>
-						<span>Signed in</span>
+						<strong>{userProfile?.showName || text.demoUser}</strong>
+						<span>{text.signedIn}</span>
 					</div>
-					<Tooltip title="Sign out">
-						<button type="button" onClick={() => void logout()} aria-label="Sign out">
+					<Tooltip title={text.signOut}>
+						<button type="button" onClick={() => void logout()} aria-label={text.signOut}>
 							<LogoutRounded />
 						</button>
 					</Tooltip>
@@ -1033,15 +1045,19 @@ export function AdvisorWorkspacePage() {
 				<button
 					className="advisor-sidebar-scrim"
 					type="button"
-					aria-label="Close navigation"
+					aria-label={text.closeNavigation}
 					onClick={() => setMobileMenuOpen(false)}
 				/>
 			)}
 
 			<div className="advisor-main-shell">
 				<header className="advisor-mobile-header">
-					<Tooltip title="Open navigation">
-						<button type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
+					<Tooltip title={text.openNavigation}>
+						<button
+							type="button"
+							onClick={() => setMobileMenuOpen(true)}
+							aria-label={text.openNavigation}
+						>
 							<MenuRounded />
 						</button>
 					</Tooltip>
@@ -1050,7 +1066,7 @@ export function AdvisorWorkspacePage() {
 						className="advisor-mobile-domain"
 						style={{ '--mobile-domain': WORKSPACE_DOMAINS[selectedDomain].accent } as React.CSSProperties}
 					>
-						{activeSession ? WORKSPACE_DOMAINS[selectedDomain].shortTitle : 'New'}
+						{activeSession ? getWorkspaceDomainConfig(selectedDomain, lang).shortTitle : text.new}
 					</span>
 				</header>
 				<WorkspaceRoute selectedDomain={selectedDomain} onDomainChange={setSelectedDomain} />
