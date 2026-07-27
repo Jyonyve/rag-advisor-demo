@@ -89,7 +89,7 @@ const copy = {
 		cancel: 'Cancel response',
 		fictionalOnly: 'Fictional demo data only',
 		financeDisclaimer:
-			'Educational demo only—not financial advice. Products and outcomes are fictional.',
+			'Educational demo—not financial or legal advice. Products and profiles are fictional; attributed public regulatory sources may be real.',
 		healthcareDisclaimer:
 			'Administrative demo only—not medical advice. Facilities and workflows are fictional.',
 		opening: 'Opening Grounded…',
@@ -106,6 +106,8 @@ const copy = {
 		excludedGroups: 'Excluded source groups',
 		noEvidence: 'Sources, exclusions, and assumptions will appear after the first response.',
 		document: 'document',
+		publicSource: 'Public source',
+		asOf: 'As of',
 		working: 'WORKING',
 		taskFailed: 'The response could not be generated.',
 		taskQuestionLabel: 'Ask a grounded question',
@@ -262,7 +264,8 @@ const copy = {
 		send: '질문 보내기',
 		cancel: '응답 취소',
 		fictionalOnly: '가상 데모 데이터만 사용',
-		financeDisclaimer: '교육용 데모이며 금융 자문이 아닙니다. 상품과 결과는 모두 가상입니다.',
+		financeDisclaimer:
+			'금융·법률 자문이 아닌 교육용 데모입니다. 상품과 프로필은 가상이며, 출처가 표시된 공공 규제 자료는 실제 자료일 수 있습니다.',
 		healthcareDisclaimer: '운영 절차 데모이며 의료 조언이 아닙니다. 기관과 절차는 모두 가상입니다.',
 		opening: 'Grounded를 여는 중…',
 		loadingWorkspace: '워크스페이스를 불러오는 중…',
@@ -278,6 +281,8 @@ const copy = {
 		excludedGroups: '제외된 근거 그룹',
 		noEvidence: '첫 응답 이후 근거, 제외 사유, 가정이 여기에 표시됩니다.',
 		document: '문서',
+		publicSource: '공공 출처',
+		asOf: '기준일',
 		working: '작업 중',
 		taskFailed: '응답을 생성할 수 없습니다.',
 		taskQuestionLabel: '근거 기반 질문 입력',

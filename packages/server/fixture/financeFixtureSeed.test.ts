@@ -25,9 +25,9 @@ test('database-aware finance fixture planning defaults to inserts and provider c
 	assert.equal(plan.safety.embeddingProviderCallsAttempted, false);
 	assert.equal(plan.ownerResolution.resolvedSingleOwner, true);
 	assert.deepEqual(plan.plannedOperations.characters.inserts, ['finance-assistant_demo']);
-	assert.equal(plan.plannedOperations.lores.inserts.length, 7);
-	assert.equal(plan.plannedEmbeddings.providerCallSourceIds.length, 7);
-	assert.equal(plan.plannedEmbeddings.maximumProviderCalls, 7);
+	assert.equal(plan.plannedOperations.lores.inserts.length, 12);
+	assert.equal(plan.plannedEmbeddings.providerCallSourceIds.length, 12);
+	assert.equal(plan.plannedEmbeddings.maximumProviderCalls, 12);
 	assert.deepEqual(plan.validationFailures, []);
 });
 

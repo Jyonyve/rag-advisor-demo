@@ -1,5 +1,6 @@
 import type { AssistantDomain } from '../character/character.type.js';
 import type { DocumentOrigin } from '../document/document.type.js';
+import type { PublicSourceAttribution } from '../lore/lore.type.js';
 
 export const RAG_EVIDENCE_SOURCE_KINDS = [
 	'chat_memory',
@@ -35,6 +36,7 @@ export interface RagEvidenceItem {
 	label: string;
 	domain: AssistantDomain;
 	origin?: DocumentOrigin;
+	publicSource?: PublicSourceAttribution;
 	relevanceScore?: number;
 }
 

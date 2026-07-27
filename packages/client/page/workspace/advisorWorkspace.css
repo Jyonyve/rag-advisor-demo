@@ -1455,6 +1455,16 @@ textarea {
 	text-transform: capitalize;
 }
 
+.advisor-source-list a {
+	align-self: flex-start;
+	margin-top: 4px;
+	color: inherit;
+	font-size: 0.55rem;
+	font-weight: 720;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
 .advisor-inspector__empty {
 	margin: 14px 0 0;
 	color: var(--advisor-muted);

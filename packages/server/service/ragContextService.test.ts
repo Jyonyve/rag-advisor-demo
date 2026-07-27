@@ -12,6 +12,7 @@ import { buildSessionId } from '@rag-advisor-demo/shared/util';
 
 import { DEMO_CHARACTER_FIXTURES, DEMO_LORE_FIXTURES } from '../fixture/domainFixtures.js';
 import { FINANCE_CATALOG_FIXTURES } from '../fixture/financeFixtures.js';
+import { FINANCE_REGULATORY_FIXTURES } from '../fixture/financeRegulatoryFixtures.js';
 import { HEALTHCARE_OPERATIONS_FIXTURES } from '../fixture/healthcareOperationsFixtures.js';
 import { resolveRagContext } from './ragContextService.js';
 
@@ -100,7 +101,10 @@ test('resolves finance context without altering the current message and exposes 
 		}),
 		memories: memories({
 			longTermHistory: [chatMemory(sessionId, 'finance-memory_demo-chat')],
-			relevantLore: [{ ...DEMO_LORE_FIXTURES[0], userId: USER_ID }],
+			relevantLore: [
+				{ ...DEMO_LORE_FIXTURES[0], userId: USER_ID },
+				{ ...FINANCE_REGULATORY_FIXTURES[0], userId: USER_ID },
+			],
 			relevantDocuments: [manualDocument, generatedDocument],
 		}),
 	});
@@ -118,6 +122,9 @@ test('resolves finance context without altering the current message and exposes 
 			.map(({ origin }) => origin),
 		['manual', 'generated']
 	);
+	const publicEvidence = resolved.evidence.items.find(({ publicSource }) => publicSource);
+	assert.equal(publicEvidence?.publicSource?.sourceId, 'KR-FCPA-20260102');
+	assert.equal(publicEvidence?.publicSource?.jurisdiction, 'KR');
 	const serializedEvidence = JSON.stringify(resolved.evidence);
 	assert.equal(serializedEvidence.includes(manualDocument.body), false);
 	assert.equal(serializedEvidence.includes(USER_ID), false);

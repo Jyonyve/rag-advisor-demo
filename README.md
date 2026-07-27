@@ -13,9 +13,11 @@ The application is built as a TypeScript monorepo with:
 
 ## Safety and scope
 
-This project uses fictional products, prospectuses, regulations, and investor profiles. It is an
-engineering demonstration, not financial advice. Generated responses must identify assumptions,
-avoid guaranteed outcomes, and ground product claims in retrieved demo documents.
+This project uses fictional products, disclosures, and investor profiles. Finance regulatory
+education may use attributed Korean public sources with fixed retrieval dates and snapshot dates.
+It is an engineering demonstration, not financial or legal advice. Generated responses must
+identify assumptions, avoid guaranteed outcomes, distinguish public regulation from fictional
+product evidence, and ground material claims in retrieved sources.
 
 ## Current status
 
@@ -43,8 +45,28 @@ keys or database credentials.
 
 ## Planned demonstration
 
-1. Retrieve fictional funds, deposit products, and regulations from pgvector.
+1. Retrieve fictional products and attributed Korean public regulatory education from pgvector.
 2. Remember normalized investor preferences within an isolated session.
 3. Explain product matches using retrieved prospectus evidence.
 4. Generate a structured personalized recommendation report with risk warnings and source
    references.
+
+## Korean public finance sources
+
+The deterministic Finance fixture includes educational summaries of these official sources. The
+canonical fixture metadata records the authority, stable source ID, source URL, publication date,
+retrieval date, data-as-of date, document type, and reuse category.
+
+- [Financial Consumer Protection Act](https://www.law.go.kr/LSW/lsInfoP.do?lsId=013704), current
+  fixture snapshot effective 2026-01-02.
+- [Enforcement Decree of the Financial Consumer Protection Act](https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=285715),
+  current fixture snapshot effective 2026-04-28.
+- [Financial Services Commission explanation of the suitability principle](https://www.korea.kr/briefing/actuallyView.do?newsId=148885132),
+  text reused under the stated KOGL attribution condition.
+- [Depositor Protection Act](https://www.law.go.kr/LSW/lsInfoP.do?lsId=001537), current fixture
+  snapshot effective 2026-01-02.
+- [Financial Services Commission notice on the KRW 100 million deposit-protection limit](https://www.korea.kr/news/policyNewsView.do?newsId=148943235),
+  text reused under the stated KOGL attribution condition.
+
+The repository does not snapshot real retail products: all products presented by the demo remain
+fictional. Public-source summaries are not substitutes for the current official text.

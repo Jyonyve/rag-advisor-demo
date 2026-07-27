@@ -4,6 +4,28 @@ import { METADATA_TYPES } from '../../config/index.js';
 import { AssistantDomain, assistantDomainSchema } from '../character/character.type.js';
 import { z } from 'zod';
 
+export const publicSourceAttributionSchema = z
+	.object({
+		sourceId: z.string().trim().min(1),
+		title: z.string().trim().min(1),
+		authority: z.string().trim().min(1),
+		jurisdiction: z.literal('KR'),
+		documentType: z.enum([
+			'LEGISLATION',
+			'REGULATION_DETAIL',
+			'REGULATORY_GUIDANCE',
+			'POLICY_NOTICE',
+		]),
+		sourceUrl: z.url(),
+		publishedAt: z.iso.date().optional(),
+		retrievedAt: z.iso.date(),
+		license: z.enum(['KOREAN_LAW_TEXT', 'KOGL_TYPE_1_TEXT_ONLY']),
+		dataAsOf: z.iso.date(),
+	})
+	.strict();
+
+export type PublicSourceAttribution = z.infer<typeof publicSourceAttributionSchema>;
+
 export const financeLoreStructuredMetadataSchema = z
 	.object({
 		domain: z.literal('finance'),
@@ -14,6 +36,7 @@ export const financeLoreStructuredMetadataSchema = z
 		productCode: z.string().trim().min(1).optional(),
 		productFixtureId: z.string().trim().min(1).optional(),
 		disclosureCode: z.string().trim().min(1).optional(),
+		publicSource: publicSourceAttributionSchema.optional(),
 	})
 	.strict()
 	.superRefine((metadata, context) => {
@@ -43,6 +66,13 @@ export const financeLoreStructuredMetadataSchema = z
 					});
 				}
 			}
+		}
+		if (metadata.knowledgeType !== 'education' && metadata.publicSource) {
+			context.addIssue({
+				code: 'custom',
+				path: ['publicSource'],
+				message: 'Public source attribution is only valid for finance education Lore.',
+			});
 		}
 	});
 
@@ -89,6 +119,17 @@ export const officialLoreMetadataSchema = z
 				code: 'custom',
 				path: ['structuredMetadata', 'domain'],
 				message: 'Structured Lore metadata domain must match the Lore domain.',
+			});
+		}
+		if (
+			metadata.structuredMetadata.domain === 'finance' &&
+			metadata.structuredMetadata.publicSource &&
+			metadata.dataAsOf !== metadata.structuredMetadata.publicSource.dataAsOf
+		) {
+			context.addIssue({
+				code: 'custom',
+				path: ['dataAsOf'],
+				message: 'Lore dataAsOf must match the attributed public source snapshot date.',
 			});
 		}
 	});

@@ -96,10 +96,10 @@ test('finance preflight is deterministic and explicitly performs no external ope
 	});
 	assert.equal(report.databaseInspection.existingRecordCounts, 'not_inspected');
 	assert.deepEqual(report.plannedOperations.characterUpserts, ['finance-assistant_demo']);
-	assert.equal(report.plannedOperations.loreUpserts.length, 7);
+	assert.equal(report.plannedOperations.loreUpserts.length, 12);
 	assert.deepEqual(report.plannedOperations.documentUpserts, []);
-	assert.equal(report.plannedEmbeddings.replacementJobs, 7);
-	assert.deepEqual(report.plannedEmbeddings.bySourceType, { lore: 7, document: 0 });
+	assert.equal(report.plannedEmbeddings.replacementJobs, 12);
+	assert.deepEqual(report.plannedEmbeddings.bySourceType, { lore: 12, document: 0 });
 	assert.equal(report.localStableIdCollisions.length, 0);
 	assert.equal(report.validationFailures.length, 0);
 });

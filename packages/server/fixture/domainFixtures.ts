@@ -11,6 +11,7 @@ import { buildSessionId, parseSessionId } from '@rag-advisor-demo/shared/util';
 
 import { deepFreeze, DEMO_FIXTURE_DATA_VERSION } from './fixtureUtils.js';
 import { FINANCE_CATALOG_FIXTURES } from './financeFixtures.js';
+import { FINANCE_REGULATORY_FIXTURES } from './financeRegulatoryFixtures.js';
 import { HEALTHCARE_OPERATIONS_FIXTURES } from './healthcareOperationsFixtures.js';
 
 export { DEMO_FIXTURE_DATA_VERSION };
@@ -42,10 +43,12 @@ export const DEMO_CHARACTER_FIXTURES = deepFreeze([
 			createdAt: FIXTURE_TIMESTAMP,
 			updatedAt: FIXTURE_TIMESTAMP,
 			userId: DEMO_FIXTURE_OWNER_ID,
-			description: 'A fictional financial-product guidance assistant for RAG demonstrations.',
-			worldIntroduction: 'All products, profiles, and evidence are fictional demo data.',
+			description:
+				'A financial-product guidance demo using fictional products and attributed Korean public regulatory sources.',
+			worldIntroduction:
+				'Products and profiles are fictional demo data. Regulatory education may use attributed Korean public sources.',
 			instruction:
-				'Provide educational product guidance grounded in demo evidence. Do not present financial advice or guarantee outcomes.',
+				'Provide educational product guidance grounded in eligible evidence. Keep products and profiles fictional, distinguish public regulatory sources from fictional product evidence, cite sources, and never present financial advice or guarantee outcomes.',
 			worldLoreId: 'finance-assistant-core_demo-lore',
 			firstMessage: 'How can I help you explore the fictional finance demo?',
 		},
@@ -134,6 +137,7 @@ export const DEMO_LORE_FIXTURES = deepFreeze([
 			urgencyLevels: ['routine', 'time_sensitive'],
 		},
 	},
+	...FINANCE_REGULATORY_FIXTURES,
 ] as const satisfies readonly LoreInfo[]);
 
 export type FixtureValidationIssueCode =

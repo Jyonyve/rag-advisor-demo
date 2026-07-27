@@ -38,7 +38,7 @@ export interface ReceiveBotResponseOptions {
 }
 
 export const FINANCE_DEMO_NOTICE =
-	'Demo notice: These products and scenarios are fictional demo data. This is educational information, not financial advice.';
+	'Demo notice: Products and scenarios are fictional demo data. Attributed public regulatory sources may be real. This is educational information, not financial advice or legal advice.';
 export const HEALTHCARE_OPERATIONS_DEMO_NOTICE =
 	'Demo notice: This facility, workflow, and scenario are fictional demo data. This is administrative guidance, not medical advice.';
 

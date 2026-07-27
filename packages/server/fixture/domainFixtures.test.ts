@@ -19,6 +19,7 @@ import {
 	validateDomainFixtures,
 } from './domainFixtures.js';
 import { HEALTHCARE_OPERATIONS_FIXTURES } from './healthcareOperationsFixtures.js';
+import { FINANCE_REGULATORY_FIXTURES } from './financeRegulatoryFixtures.js';
 
 const cloneCharacters = (): DemoCharacterFixture[] =>
 	structuredClone(DEMO_CHARACTER_FIXTURES) as unknown as DemoCharacterFixture[];
@@ -45,15 +46,30 @@ test('built-in domain fixtures are deterministic and valid without providers or 
 	assert.equal(Object.isFrozen(DEMO_LORE_FIXTURES[0].characterIds), true);
 	assert.equal(Object.isFrozen(HEALTHCARE_OPERATIONS_FIXTURES), true);
 	assert.equal(Object.isFrozen(HEALTHCARE_OPERATIONS_FIXTURES[0].lore.structuredMetadata), true);
+	assert.equal(Object.isFrozen(FINANCE_REGULATORY_FIXTURES), true);
 
 	const report = validateBuiltInDomainFixtures();
 	assert.deepEqual(report, {
 		valid: true,
 		characterCount: 2,
-		loreCount: 13,
-		expectedEmbeddingCalls: 13,
+		loreCount: 18,
+		expectedEmbeddingCalls: 18,
 		issues: [],
 	});
+});
+
+test('Korean public regulatory Lore has deterministic attribution and synchronized snapshot dates', () => {
+	assert.equal(FINANCE_REGULATORY_FIXTURES.length, 5);
+	for (const lore of FINANCE_REGULATORY_FIXTURES) {
+		assert.equal(lore.domain, 'finance');
+		assert.equal(lore.structuredMetadata?.domain, 'finance');
+		if (lore.structuredMetadata?.domain !== 'finance') assert.fail('Expected finance metadata.');
+		const source = lore.structuredMetadata.publicSource;
+		assert.ok(source);
+		assert.equal(source.jurisdiction, 'KR');
+		assert.equal(source.dataAsOf, lore.dataAsOf);
+		assert.match(source.sourceUrl, /^https:\/\/(?:www\.)?(?:law\.go\.kr|korea\.kr)\//);
+	}
 });
 
 test('fixed Character IDs pass current validation and preserve identity through Session parsing', () => {

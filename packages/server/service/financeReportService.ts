@@ -126,7 +126,7 @@ ${renderList(
 
 	return `# ${escapeHtml(output.title)}
 
-> Demo notice: This report uses fictional products and scenarios for a technical RAG demonstration. It is educational information, not financial advice. No return, principal, income, or outcome is guaranteed.
+> Demo notice: This report uses fictional products and scenarios for a technical RAG demonstration. Attributed public regulatory sources may be real. It is educational information, not financial advice or legal advice. No return, principal, income, or outcome is guaranteed.
 
 ## Summary
 

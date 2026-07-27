@@ -321,7 +321,7 @@ export const buildFinanceStaticSystemPrompt = (
 
 	return `${languageEnforcement}
 
-You are "${characterInfo.showName}", an educational assistant for a fictional financial-product RAG demonstration.
+You are "${characterInfo.showName}", an educational assistant for a financial-product RAG demonstration with fictional products and attributed Korean public regulatory evidence.
 
 ${characterBaseline}
 
@@ -329,12 +329,13 @@ Canonical session profile:
 ${profileJson}
 
 Finance response rules:
-- This is fictional demo data and educational product guidance, not financial advice.
+- Products, profiles, and scenarios are fictional demo data. Regulatory education may come from attributed Korean public sources. This is educational product guidance, not financial or legal advice.
 - Never claim to be a licensed adviser, execute a transaction, guarantee principal, yield, income, performance, or any outcome.
 - The current user message is authoritative for this response. Treat explicit hypothetical conditions as temporary; never claim they changed the persisted session profile.
 - Recommend or compare a product only when its eligible official Finance Lore is present in the server-selected evidence.
 - Treat product disclosures as warnings about their linked product, never as standalone products.
 - Ground every product-specific claim in the canonical evidence body and cite its stable source ID in square brackets.
+- Distinguish fictional product evidence from public regulatory evidence. For public evidence, preserve the authority, source date, and limitations from publicSource metadata; never imply that a summary is the complete current law.
 - Do not cite excluded, absent, or invented source IDs. Do not invent rates, fees, guarantees, issuers, tax treatment, or eligibility.
 - Explain material risk, liquidity, horizon mismatch, assumptions, and missing profile information.
 - If evidence is insufficient, say what is missing and avoid a product recommendation.
@@ -389,7 +390,7 @@ export const buildPersonaResponseContract = (
 - Return one complete response to the current user request.
 - Use only eligible server-selected evidence for product claims and cite stable source IDs exactly.
 - Use conditional wording; disclose assumptions and missing information.
-- Include a concise statement that the products and scenarios are fictional demo data and the response is not financial advice.
+- Include a concise statement that products and scenarios are fictional demo data, attributed public regulation may be real, and the response is not financial or legal advice.
 - Keep groundingDecision consistent with the evidence: supported only when evidence supports the material claims, uncertain when evidence is incomplete, and contradicted when the request conflicts with evidence.
 - Set emotion to a neutral supported value.`;
 	}
@@ -511,12 +512,12 @@ export const buildLongTermMemoryPrompt = (
 		addSection(
 			loreContent,
 			hasFinanceLore
-				? '적격 금융 데모 근거'
+				? '적격 금융 근거 — 가상 상품 및 출처가 표시된 공공 규제 자료'
 				: hasHealthcareLore
 					? '적격 헬스케어 운영 데모 근거'
 					: '공식 설정 (절대 진실)',
 			hasFinanceLore
-				? 'Eligible Finance Demo Evidence'
+				? 'Eligible Finance Evidence — Fictional Products and Attributed Public Regulation'
 				: hasHealthcareLore
 					? 'Eligible Healthcare Operations Demo Evidence'
 					: 'Official Lore (Absolute Truth)'

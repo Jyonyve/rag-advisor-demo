@@ -13,6 +13,7 @@ import {
 
 import { DEMO_CHARACTER_FIXTURES } from '../fixture/domainFixtures.js';
 import { FINANCE_CATALOG_FIXTURES } from '../fixture/financeFixtures.js';
+import { FINANCE_REGULATORY_FIXTURES } from '../fixture/financeRegulatoryFixtures.js';
 import { HEALTHCARE_OPERATIONS_FIXTURES } from '../fixture/healthcareOperationsFixtures.js';
 import { buildPersonaMessages } from './personaEngine.js';
 
@@ -60,11 +61,12 @@ const profile: ProfileInfo = {
 
 test('finance persona messages contain canonical eligible evidence and finance safety rules', () => {
 	const cedar = { ...FINANCE_CATALOG_FIXTURES[0].lore, userId: profile.userId };
+	const regulation = { ...FINANCE_REGULATORY_FIXTURES[0], userId: profile.userId };
 	const memories: MemoryResponse = {
 		langCode: 'eng',
 		shortTermHistory: [],
 		longTermHistory: [],
-		relevantLore: [cedar],
+		relevantLore: [cedar, regulation],
 		relevantHistory: [],
 		relevantDocuments: [],
 	};
@@ -82,6 +84,9 @@ test('finance persona messages contain canonical eligible evidence and finance s
 	assert.match(prompt, /Canonical body:/);
 	assert.match(prompt, /DEMO DATA ONLY/);
 	assert.match(prompt, /cite stable source IDs/i);
+	assert.match(prompt, /attributed Korean public regulatory evidence/i);
+	assert.match(prompt, /KR-FCPA-20260102/);
+	assert.match(prompt, /law\.go\.kr/);
 	assert.doesNotMatch(prompt, /third-person limited narrator/i);
 	assert.equal(messages.at(-1)?.role, 'user');
 });

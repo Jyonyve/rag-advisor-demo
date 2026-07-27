@@ -469,8 +469,15 @@ const EvidenceInspector = ({
 										<small>
 											{item.origin
 												? `${item.origin === 'manual' ? text.manual : text.generated} ${text.document}`
-												: item.sourceKind.replaceAll('_', ' ')}
+												: item.publicSource
+													? `${item.publicSource.authority} · ${text.asOf} ${item.publicSource.dataAsOf}`
+													: item.sourceKind.replaceAll('_', ' ')}
 										</small>
+										{item.publicSource && (
+											<a href={item.publicSource.sourceUrl} target="_blank" rel="noreferrer">
+												{text.publicSource}
+											</a>
+										)}
 									</div>
 								</li>
 							))}

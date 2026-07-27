@@ -173,6 +173,9 @@ const buildEvidenceItems = (
 		sourceId: lore.loreId,
 		label: lore.title || lore.generatedTitle || 'Character Lore',
 		domain,
+		...(lore.structuredMetadata?.domain === 'finance' && lore.structuredMetadata.publicSource
+			? { publicSource: lore.structuredMetadata.publicSource }
+			: {}),
 	})),
 	...documents.map((document) => ({
 		sourceKind: 'session_document' as const,
