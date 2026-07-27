@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router';
+import { Route, Routes, useNavigate } from 'react-router';
 import * as reactRouter from 'react-router';
 import { EmailPasswordPreBuiltUI } from 'supertokens-auth-react/recipe/emailpassword/prebuiltui.js';
 import { getSuperTokensRoutesForReactRouterDom } from 'supertokens-auth-react/ui/index.js';
@@ -7,6 +7,16 @@ import { getSuperTokensRoutesForReactRouterDom } from 'supertokens-auth-react/ui
 import { AdvisorWorkspacePage } from './page/workspace/index.js';
 import { useToast } from './provider/ToastProvider.jsx';
 import { setupApiClient } from './util/clientApiHelpers.js';
+
+function WorkspaceFallbackRedirect() {
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		navigate('/', { replace: true });
+	}, [navigate]);
+
+	return <AdvisorWorkspacePage />;
+}
 
 export function App() {
 	const { addToast } = useToast();
@@ -23,7 +33,7 @@ export function App() {
 			<Route path="workspace" element={<AdvisorWorkspacePage />} />
 			<Route path="workspace/:sessionId" element={<AdvisorWorkspacePage />} />
 			{hasMounted && getSuperTokensRoutesForReactRouterDom(reactRouter, [EmailPasswordPreBuiltUI])}
-			<Route path="*" element={<Navigate to="/" replace />} />
+			<Route path="*" element={<WorkspaceFallbackRedirect />} />
 		</Routes>
 	);
 }

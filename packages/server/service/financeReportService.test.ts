@@ -9,6 +9,7 @@ import type { ResolvedRagContext } from './ragContextService.js';
 import {
 	buildFinanceReportMessages,
 	financeReportOutputSchema,
+	mergeFinanceReportLore,
 	renderFinanceReportMarkdown,
 	validateFinanceReportEvidence,
 	type FinanceReportOutput,
@@ -130,4 +131,12 @@ test('finance report prompt contains eligible canonical evidence and no hidden r
 	assert.match(serialized, /DEMO DATA ONLY/);
 	assert.match(serialized, /allowedEvidenceIds/);
 	assert.doesNotMatch(serialized, /chain-of-thought/i);
+});
+
+test('finance reports retain retrieved ranking while adding missing canonical Character Lore once', () => {
+	const harbor = FINANCE_CATALOG_FIXTURES[1].lore;
+	assert.deepEqual(
+		mergeFinanceReportLore([cedar, harbor], [cedar, cedarDisclosure]).map(({ loreId }) => loreId),
+		[cedar.loreId, harbor.loreId, cedarDisclosure.loreId]
+	);
 });

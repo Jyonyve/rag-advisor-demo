@@ -4,7 +4,8 @@ import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined';
 import PostAddRounded from '@mui/icons-material/PostAddRounded';
 import TuneRounded from '@mui/icons-material/TuneRounded';
-import { Dialog, DialogContent, IconButton } from '@mui/material';
+import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
+import { Dialog, DialogContent, IconButton, Tooltip } from '@mui/material';
 import { DEFAULT_CHAT_MODEL } from '@rag-advisor-demo/shared/config';
 import type {
 	AssistantDomain,
@@ -17,6 +18,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useDocumentApi, useProfileApi } from '../../hook/api/index.js';
 import {
+	buildDefaultFinanceReportRequest,
 	buildFinanceDomainProfile,
 	buildHealthcareDomainProfile,
 	EMPTY_FINANCE_PROFILE,
@@ -25,6 +27,7 @@ import {
 	type HealthcareProfileDraft,
 	WORKSPACE_DOMAINS,
 } from './workspaceConfig.js';
+import { parseReportMarkdown } from './reportMarkdownUtils.js';
 
 export type WorkspaceToolTab = 'profile' | 'documents' | 'report';
 
@@ -67,6 +70,33 @@ const documentStatusLabel = (document: DocumentInfo): string => {
 	return 'Draft';
 };
 
+const ReportMarkdown = ({ body }: { body: string }) => {
+	const blocks = useMemo(() => parseReportMarkdown(body), [body]);
+	return (
+		<div className="advisor-report-markdown">
+			{blocks.map((block, index) => {
+				const key = `${block.type}-${index}`;
+				if (block.type === 'heading') {
+					if (block.level === 1) return <h1 key={key}>{block.text}</h1>;
+					if (block.level === 2) return <h2 key={key}>{block.text}</h2>;
+					return <h3 key={key}>{block.text}</h3>;
+				}
+				if (block.type === 'blockquote') return <blockquote key={key}>{block.text}</blockquote>;
+				if (block.type === 'list') {
+					return (
+						<ul key={key}>
+							{block.items.map((item, itemIndex) => (
+								<li key={`${key}-${itemIndex}`}>{item}</li>
+							))}
+						</ul>
+					);
+				}
+				return <p key={key}>{block.text}</p>;
+			})}
+		</div>
+	);
+};
+
 export function WorkspaceToolsDialog({
 	open,
 	initialTab,
@@ -82,9 +112,10 @@ export function WorkspaceToolsDialog({
 	const [documentTitle, setDocumentTitle] = useState('');
 	const [documentBody, setDocumentBody] = useState('');
 	const [documentIncludeInRag, setDocumentIncludeInRag] = useState(true);
-	const [reportRequest, setReportRequest] = useState(
-		'Create a concise personalized comparison report from the current fictional profile and eligible evidence.'
+	const [reportRequest, setReportRequest] = useState(() =>
+		buildDefaultFinanceReportRequest(profile.domainProfile)
 	);
+	const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
 	const [isSavingProfile, setIsSavingProfile] = useState(false);
 	const [message, setMessage] = useState<string>();
 	const [error, setError] = useState<string>();
@@ -98,12 +129,15 @@ export function WorkspaceToolsDialog({
 			),
 		[documentQuery.data]
 	);
+	const selectedDocument = documents.find((document) => document.documentId === selectedDocumentId);
 
 	useEffect(() => {
 		if (!open) return;
 		setTab(initialTab);
 		setFinanceDraft(profileToFinanceDraft(profile));
 		setHealthcareDraft(profileToHealthcareDraft(profile));
+		setReportRequest(buildDefaultFinanceReportRequest(profile.domainProfile));
+		setSelectedDocumentId(undefined);
 		setMessage(undefined);
 		setError(undefined);
 	}, [initialTab, open, profile]);
@@ -227,326 +261,386 @@ export function WorkspaceToolsDialog({
 	};
 
 	return (
-		<Dialog
-			open={open}
-			onClose={onClose}
-			fullWidth
-			maxWidth="md"
-			slotProps={{ paper: { className: 'advisor-tools-dialog' } }}
-		>
-			<DialogContent className="advisor-tools-dialog__content">
-				<header className="advisor-tools-dialog__header">
-					<div>
-						<span>WORKSPACE TOOLS</span>
-						<h2>{config.shortTitle}</h2>
-					</div>
-					<IconButton onClick={onClose} aria-label="Close workspace tools">
-						<CloseRounded />
-					</IconButton>
-				</header>
+		<>
+			<Dialog
+				open={open}
+				onClose={onClose}
+				fullWidth
+				maxWidth="md"
+				slotProps={{ paper: { className: 'advisor-tools-dialog' } }}
+			>
+				<DialogContent className="advisor-tools-dialog__content">
+					<header className="advisor-tools-dialog__header">
+						<div>
+							<span>WORKSPACE TOOLS</span>
+							<h2>{config.shortTitle}</h2>
+						</div>
+						<Tooltip title="Close workspace tools">
+							<IconButton onClick={onClose} aria-label="Close workspace tools">
+								<CloseRounded />
+							</IconButton>
+						</Tooltip>
+					</header>
 
-				<nav className="advisor-tools-tabs" aria-label="Workspace tools">
-					<button
-						className={tab === 'profile' ? 'is-active' : ''}
-						type="button"
-						onClick={() => setTab('profile')}
-					>
-						<TuneRounded />
-						Session context
-					</button>
-					<button
-						className={tab === 'documents' ? 'is-active' : ''}
-						type="button"
-						onClick={() => setTab('documents')}
-					>
-						<DescriptionOutlined />
-						References
-						<span>{documents.length}</span>
-					</button>
-					{domain === 'finance' && (
+					<nav className="advisor-tools-tabs" aria-label="Workspace tools">
 						<button
-							className={tab === 'report' ? 'is-active' : ''}
+							className={tab === 'profile' ? 'is-active' : ''}
 							type="button"
-							onClick={() => setTab('report')}
+							onClick={() => setTab('profile')}
 						>
-							<FactCheckOutlined />
-							Finance report
+							<TuneRounded />
+							Session context
 						</button>
-					)}
-				</nav>
+						<button
+							className={tab === 'documents' ? 'is-active' : ''}
+							type="button"
+							onClick={() => setTab('documents')}
+						>
+							<DescriptionOutlined />
+							References
+							<span>{documents.length}</span>
+						</button>
+						{domain === 'finance' && (
+							<button
+								className={tab === 'report' ? 'is-active' : ''}
+								type="button"
+								onClick={() => setTab('report')}
+							>
+								<FactCheckOutlined />
+								Finance report
+							</button>
+						)}
+					</nav>
 
-				<div className="advisor-tools-dialog__body">
-					{tab === 'profile' && (
-						<section className="advisor-tool-panel">
-							<div className="advisor-tool-panel__intro">
-								<span>CANONICAL SESSION PROFILE</span>
-								<h3>Set the context used to filter evidence.</h3>
-								<p>Blank fields remain explicitly missing and are never silently inferred.</p>
-							</div>
-							{domain === 'finance' ? (
-								<div className="advisor-form-grid">
-									<label className="advisor-field advisor-field--wide">
-										<span>Investment goal</span>
-										<input
-											value={financeDraft.investmentGoal}
-											onChange={(event) => updateFinance('investmentGoal', event.target.value)}
-										/>
-									</label>
-									<label className="advisor-field">
-										<span>Horizon (months)</span>
-										<input
-											type="number"
-											min="1"
-											value={financeDraft.investmentHorizonMonths}
-											onChange={(event) => updateFinance('investmentHorizonMonths', event.target.value)}
-										/>
-									</label>
-									<label className="advisor-field">
-										<span>Liquidity need</span>
-										<select
-											value={financeDraft.liquidityNeed}
-											onChange={(event) =>
-												updateFinance(
-													'liquidityNeed',
-													event.target.value as FinanceProfileDraft['liquidityNeed']
-												)
-											}
-										>
-											<option value="">Not provided</option>
-											<option value="high">High</option>
-											<option value="medium">Medium</option>
-											<option value="low">Low</option>
-										</select>
-									</label>
-									<label className="advisor-field">
-										<span>Risk preference</span>
-										<select
-											value={financeDraft.riskPreference}
-											onChange={(event) =>
-												updateFinance(
-													'riskPreference',
-													event.target.value as FinanceProfileDraft['riskPreference']
-												)
-											}
-										>
-											<option value="">Not provided</option>
-											<option value="conservative">Conservative</option>
-											<option value="moderate">Moderate</option>
-											<option value="growth">Growth</option>
-										</select>
-									</label>
-									<label className="advisor-field advisor-field--wide">
-										<span>Constraints</span>
-										<input
-											value={financeDraft.constraints}
-											onChange={(event) => updateFinance('constraints', event.target.value)}
-										/>
-									</label>
+					<div className="advisor-tools-dialog__body">
+						{tab === 'profile' && (
+							<section className="advisor-tool-panel">
+								<div className="advisor-tool-panel__intro">
+									<span>CANONICAL SESSION PROFILE</span>
+									<h3>Set the context used to filter evidence.</h3>
+									<p>Blank fields remain explicitly missing and are never silently inferred.</p>
 								</div>
-							) : (
-								<div className="advisor-form-grid">
-									<label className="advisor-field advisor-field--wide">
-										<span>Workflow topic</span>
-										<input
-											value={healthcareDraft.workflowTopic}
-											onChange={(event) => updateHealthcare('workflowTopic', event.target.value)}
-										/>
-									</label>
-									<label className="advisor-field">
-										<span>Requester role</span>
-										<select
-											value={healthcareDraft.requesterRole}
-											onChange={(event) =>
-												updateHealthcare(
-													'requesterRole',
-													event.target.value as HealthcareProfileDraft['requesterRole']
-												)
-											}
-										>
-											<option value="">Not provided</option>
-											<option value="patient_support">Patient support</option>
-											<option value="admin_staff">Administrative staff</option>
-											<option value="nurse">Nurse</option>
-											<option value="doctor">Doctor</option>
-										</select>
-									</label>
-									<label className="advisor-field">
-										<span>Urgency</span>
-										<select
-											value={healthcareDraft.urgency}
-											onChange={(event) =>
-												updateHealthcare('urgency', event.target.value as HealthcareProfileDraft['urgency'])
-											}
-										>
-											<option value="">Not provided</option>
-											<option value="routine">Routine</option>
-											<option value="time_sensitive">Time-sensitive</option>
-										</select>
-									</label>
-									<label className="advisor-field advisor-field--wide">
-										<span>Constraints</span>
-										<input
-											value={healthcareDraft.constraints}
-											onChange={(event) => updateHealthcare('constraints', event.target.value)}
-										/>
-									</label>
-								</div>
-							)}
-							<div className="advisor-tool-panel__actions">
-								<button
-									className="advisor-button advisor-button--primary"
-									type="button"
-									onClick={() => void saveProfile()}
-									disabled={isSavingProfile}
-								>
-									<CheckRounded />
-									{isSavingProfile ? 'Saving…' : 'Save context'}
-								</button>
-							</div>
-						</section>
-					)}
-
-					{tab === 'documents' && (
-						<section className="advisor-tool-panel">
-							<div className="advisor-tool-panel__intro">
-								<span>SESSION KNOWLEDGE</span>
-								<h3>Add optional reference material.</h3>
-								<p>
-									Manual and generated Documents remain distinct. Retrieval requires approval and an explicit
-									RAG preference.
-								</p>
-							</div>
-							<div className="advisor-reference-create">
-								<label className="advisor-field">
-									<span>Reference title</span>
-									<input
-										value={documentTitle}
-										onChange={(event) => setDocumentTitle(event.target.value)}
-										placeholder="Fictional session reference"
-									/>
-								</label>
-								<label className="advisor-field">
-									<span>Reference body</span>
-									<textarea
-										value={documentBody}
-										onChange={(event) => setDocumentBody(event.target.value)}
-										placeholder="Paste fictional reference text only."
-										rows={5}
-									/>
-								</label>
-								<div className="advisor-reference-create__footer">
-									<label className="advisor-check-field">
-										<input
-											type="checkbox"
-											checked={documentIncludeInRag}
-											onChange={(event) => setDocumentIncludeInRag(event.target.checked)}
-										/>
-										Request inclusion in RAG after approval
-									</label>
+								{domain === 'finance' ? (
+									<div className="advisor-form-grid">
+										<label className="advisor-field advisor-field--wide">
+											<span>Investment goal</span>
+											<input
+												value={financeDraft.investmentGoal}
+												onChange={(event) => updateFinance('investmentGoal', event.target.value)}
+											/>
+										</label>
+										<label className="advisor-field">
+											<span>Horizon (months)</span>
+											<input
+												type="number"
+												min="1"
+												value={financeDraft.investmentHorizonMonths}
+												onChange={(event) => updateFinance('investmentHorizonMonths', event.target.value)}
+											/>
+										</label>
+										<label className="advisor-field">
+											<span>Liquidity need</span>
+											<select
+												value={financeDraft.liquidityNeed}
+												onChange={(event) =>
+													updateFinance(
+														'liquidityNeed',
+														event.target.value as FinanceProfileDraft['liquidityNeed']
+													)
+												}
+											>
+												<option value="">Not provided</option>
+												<option value="high">High</option>
+												<option value="medium">Medium</option>
+												<option value="low">Low</option>
+											</select>
+										</label>
+										<label className="advisor-field">
+											<span>Risk preference</span>
+											<select
+												value={financeDraft.riskPreference}
+												onChange={(event) =>
+													updateFinance(
+														'riskPreference',
+														event.target.value as FinanceProfileDraft['riskPreference']
+													)
+												}
+											>
+												<option value="">Not provided</option>
+												<option value="conservative">Conservative</option>
+												<option value="moderate">Moderate</option>
+												<option value="growth">Growth</option>
+											</select>
+										</label>
+										<label className="advisor-field advisor-field--wide">
+											<span>Constraints</span>
+											<input
+												value={financeDraft.constraints}
+												onChange={(event) => updateFinance('constraints', event.target.value)}
+											/>
+										</label>
+									</div>
+								) : (
+									<div className="advisor-form-grid">
+										<label className="advisor-field advisor-field--wide">
+											<span>Workflow topic</span>
+											<input
+												value={healthcareDraft.workflowTopic}
+												onChange={(event) => updateHealthcare('workflowTopic', event.target.value)}
+											/>
+										</label>
+										<label className="advisor-field">
+											<span>Requester role</span>
+											<select
+												value={healthcareDraft.requesterRole}
+												onChange={(event) =>
+													updateHealthcare(
+														'requesterRole',
+														event.target.value as HealthcareProfileDraft['requesterRole']
+													)
+												}
+											>
+												<option value="">Not provided</option>
+												<option value="patient_support">Patient support</option>
+												<option value="admin_staff">Administrative staff</option>
+												<option value="nurse">Nurse</option>
+												<option value="doctor">Doctor</option>
+											</select>
+										</label>
+										<label className="advisor-field">
+											<span>Urgency</span>
+											<select
+												value={healthcareDraft.urgency}
+												onChange={(event) =>
+													updateHealthcare('urgency', event.target.value as HealthcareProfileDraft['urgency'])
+												}
+											>
+												<option value="">Not provided</option>
+												<option value="routine">Routine</option>
+												<option value="time_sensitive">Time-sensitive</option>
+											</select>
+										</label>
+										<label className="advisor-field advisor-field--wide">
+											<span>Constraints</span>
+											<input
+												value={healthcareDraft.constraints}
+												onChange={(event) => updateHealthcare('constraints', event.target.value)}
+											/>
+										</label>
+									</div>
+								)}
+								<div className="advisor-tool-panel__actions">
 									<button
 										className="advisor-button advisor-button--primary"
 										type="button"
-										onClick={() => void createReferenceDocument()}
-										disabled={documentApi.isMutating || !documentTitle.trim() || !documentBody.trim()}
+										onClick={() => void saveProfile()}
+										disabled={isSavingProfile}
 									>
-										<PostAddRounded />
-										Save draft
+										<CheckRounded />
+										{isSavingProfile ? 'Saving…' : 'Save context'}
 									</button>
 								</div>
-							</div>
+							</section>
+						)}
 
-							<div className="advisor-document-list">
-								{documentQuery.isLoading ? (
-									<p>Loading references…</p>
-								) : documents.length ? (
-									documents.map((document) => (
-										<article key={document.documentId}>
-											<div className="advisor-document-list__heading">
-												<div>
-													<span>{document.origin === 'manual' ? 'MANUAL' : 'GENERATED'}</span>
-													<h4>{document.title}</h4>
-												</div>
-												<span className={`advisor-document-status advisor-document-status--${document.status}`}>
-													{documentStatusLabel(document)}
-												</span>
-											</div>
-											<p>{document.body.slice(0, 240) || 'Empty draft'}</p>
-											<div className="advisor-document-list__footer">
-												<label className="advisor-check-field">
-													<input
-														type="checkbox"
-														checked={document.includeInRag}
-														disabled={document.status === 'archived' || documentApi.isMutating}
-														onChange={(event) => void toggleDocumentRetrieval(document, event.target.checked)}
-													/>
-													Include in RAG
-												</label>
-												{document.status === 'draft' && (
-													<button
-														type="button"
-														onClick={() => void approveDocument(document)}
-														disabled={documentApi.isMutating}
-													>
-														Approve
-													</button>
-												)}
-											</div>
-										</article>
-									))
-								) : (
-									<p>No session references or reports yet.</p>
-								)}
-							</div>
-						</section>
-					)}
-
-					{tab === 'report' && domain === 'finance' && (
-						<section className="advisor-tool-panel advisor-report-panel">
-							<div className="advisor-tool-panel__intro">
-								<span>TRACEABLE OUTPUT</span>
-								<h3>Generate a personalized finance report.</h3>
-								<p>
-									The report uses the current request, Profile, eligible chat memory, Lore, and approved
-									session Documents. It is output-only by default.
-								</p>
-							</div>
-							<div className="advisor-report-card">
-								<FactCheckOutlined />
-								<div>
-									<strong>Evidence-grounded report</strong>
-									<span>
-										Up to three fictional products with citations, suitability notes, missing information, and
-										the fixed demo disclaimer.
-									</span>
+						{tab === 'documents' && (
+							<section className="advisor-tool-panel">
+								<div className="advisor-tool-panel__intro">
+									<span>SESSION KNOWLEDGE</span>
+									<h3>Add optional reference material.</h3>
+									<p>
+										Manual and generated Documents remain distinct. Retrieval requires approval and an
+										explicit RAG preference.
+									</p>
 								</div>
+								<div className="advisor-reference-create">
+									<label className="advisor-field">
+										<span>Reference title</span>
+										<input
+											value={documentTitle}
+											onChange={(event) => setDocumentTitle(event.target.value)}
+											placeholder="Fictional session reference"
+										/>
+									</label>
+									<label className="advisor-field">
+										<span>Reference body</span>
+										<textarea
+											value={documentBody}
+											onChange={(event) => setDocumentBody(event.target.value)}
+											placeholder="Paste fictional reference text only."
+											rows={5}
+										/>
+									</label>
+									<div className="advisor-reference-create__footer">
+										<label className="advisor-check-field">
+											<input
+												type="checkbox"
+												checked={documentIncludeInRag}
+												onChange={(event) => setDocumentIncludeInRag(event.target.checked)}
+											/>
+											Request inclusion in RAG after approval
+										</label>
+										<button
+											className="advisor-button advisor-button--primary"
+											type="button"
+											onClick={() => void createReferenceDocument()}
+											disabled={documentApi.isMutating || !documentTitle.trim() || !documentBody.trim()}
+										>
+											<PostAddRounded />
+											Save draft
+										</button>
+									</div>
+								</div>
+
+								<div className="advisor-document-list">
+									{documentQuery.isLoading ? (
+										<p>Loading references…</p>
+									) : documents.length ? (
+										documents.map((document) => (
+											<article key={document.documentId}>
+												<div className="advisor-document-list__heading">
+													<div>
+														<span>{document.origin === 'manual' ? 'MANUAL' : 'GENERATED'}</span>
+														<h4>{document.title}</h4>
+													</div>
+													<span
+														className={`advisor-document-status advisor-document-status--${document.status}`}
+													>
+														{documentStatusLabel(document)}
+													</span>
+												</div>
+												<p>{document.body.slice(0, 240) || 'Empty draft'}</p>
+												<div className="advisor-document-list__footer">
+													<label className="advisor-check-field">
+														<input
+															type="checkbox"
+															checked={document.includeInRag}
+															disabled={document.status === 'archived' || documentApi.isMutating}
+															onChange={(event) => void toggleDocumentRetrieval(document, event.target.checked)}
+														/>
+														Include in RAG
+													</label>
+													<div className="advisor-document-list__actions">
+														<button type="button" onClick={() => setSelectedDocumentId(document.documentId)}>
+															<VisibilityOutlined />
+															{document.status === 'draft' ? 'Read draft' : 'Read document'}
+														</button>
+														{document.status === 'draft' && (
+															<button
+																type="button"
+																onClick={() => void approveDocument(document)}
+																disabled={documentApi.isMutating}
+															>
+																Approve
+															</button>
+														)}
+													</div>
+												</div>
+											</article>
+										))
+									) : (
+										<p>No session references or reports yet.</p>
+									)}
+								</div>
+							</section>
+						)}
+
+						{tab === 'report' && domain === 'finance' && (
+							<section className="advisor-tool-panel advisor-report-panel">
+								<div className="advisor-tool-panel__intro">
+									<span>TRACEABLE OUTPUT</span>
+									<h3>Generate a personalized finance report.</h3>
+									<p>
+										The report uses the current request, Profile, eligible chat memory, Lore, and approved
+										session Documents. It is output-only by default.
+									</p>
+								</div>
+								<div className="advisor-report-card">
+									<FactCheckOutlined />
+									<div>
+										<strong>Evidence-grounded report</strong>
+										<span>
+											Up to three fictional products with citations, suitability notes, missing information,
+											and the fixed demo disclaimer.
+										</span>
+									</div>
+								</div>
+								<label className="advisor-field">
+									<span>Report request</span>
+									<textarea
+										value={reportRequest}
+										onChange={(event) => setReportRequest(event.target.value)}
+										rows={5}
+									/>
+								</label>
+								<div className="advisor-tool-panel__actions">
+									<button
+										className="advisor-button advisor-button--primary"
+										type="button"
+										onClick={() => void generateFinanceReport()}
+										disabled={documentApi.isGenerating || !reportRequest.trim()}
+									>
+										<FactCheckOutlined />
+										{documentApi.isGenerating ? 'Generating…' : 'Generate report'}
+									</button>
+								</div>
+							</section>
+						)}
+					</div>
+
+					{(message || error) && (
+						<div className={`advisor-tools-message${error ? ' is-error' : ''}`}>{error || message}</div>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={Boolean(selectedDocument)}
+				onClose={() => setSelectedDocumentId(undefined)}
+				fullWidth
+				maxWidth="md"
+				slotProps={{ paper: { className: 'advisor-document-reader' } }}
+			>
+				{selectedDocument && (
+					<DialogContent className="advisor-document-reader__content">
+						<header className="advisor-document-reader__header">
+							<div>
+								<span>{selectedDocument.origin === 'manual' ? 'MANUAL DOCUMENT' : 'GENERATED REPORT'}</span>
+								<h2>{selectedDocument.title}</h2>
 							</div>
-							<label className="advisor-field">
-								<span>Report request</span>
-								<textarea
-									value={reportRequest}
-									onChange={(event) => setReportRequest(event.target.value)}
-									rows={5}
-								/>
-							</label>
-							<div className="advisor-tool-panel__actions">
+							<Tooltip title="Close document">
+								<IconButton onClick={() => setSelectedDocumentId(undefined)} aria-label="Close document">
+									<CloseRounded />
+								</IconButton>
+							</Tooltip>
+						</header>
+						<div className="advisor-document-reader__body">
+							<ReportMarkdown body={selectedDocument.body} />
+						</div>
+						<footer className="advisor-document-reader__footer">
+							<div>
+								<span
+									className={`advisor-document-status advisor-document-status--${selectedDocument.status}`}
+								>
+									{documentStatusLabel(selectedDocument)}
+								</span>
+								<small>Review the complete document before changing its approval or RAG status.</small>
+							</div>
+							{selectedDocument.status === 'draft' && (
 								<button
 									className="advisor-button advisor-button--primary"
 									type="button"
-									onClick={() => void generateFinanceReport()}
-									disabled={documentApi.isGenerating || !reportRequest.trim()}
+									onClick={() => void approveDocument(selectedDocument)}
+									disabled={documentApi.isMutating}
 								>
-									<FactCheckOutlined />
-									{documentApi.isGenerating ? 'Generating…' : 'Generate report'}
+									<CheckRounded />
+									Approve document
 								</button>
-							</div>
-						</section>
-					)}
-				</div>
-
-				{(message || error) && (
-					<div className={`advisor-tools-message${error ? ' is-error' : ''}`}>{error || message}</div>
+							)}
+						</footer>
+					</DialogContent>
 				)}
-			</DialogContent>
-		</Dialog>
+			</Dialog>
+		</>
 	);
 }

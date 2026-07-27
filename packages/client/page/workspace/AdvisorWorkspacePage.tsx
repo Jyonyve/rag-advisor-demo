@@ -13,7 +13,7 @@ import LogoutRounded from '@mui/icons-material/LogoutRounded';
 import MenuRounded from '@mui/icons-material/MenuRounded';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TuneRounded from '@mui/icons-material/TuneRounded';
-import { Dialog, DialogContent, IconButton } from '@mui/material';
+import { Dialog, DialogContent, IconButton, Tooltip } from '@mui/material';
 import type { ChatGenerationStage } from '@rag-advisor-demo/shared/api';
 import { DEFAULT_CHAT_MODEL } from '@rag-advisor-demo/shared/config';
 import type {
@@ -651,19 +651,29 @@ const ConversationWorkspace = ({
 							<h1>{session.title}</h1>
 						</div>
 						<div className="advisor-conversation__actions">
-							<button type="button" onClick={() => openTools('profile')}>
-								<TuneRounded />
-								<span>Context</span>
-							</button>
-							<button type="button" onClick={() => openTools('documents')}>
-								<DescriptionOutlined />
-								<span>References</span>
-							</button>
-							{domain === 'finance' && (
-								<button type="button" onClick={() => openTools('report')}>
-									<FactCheckOutlined />
-									<span>Report</span>
+							<Tooltip title="Session context">
+								<button type="button" onClick={() => openTools('profile')} aria-label="Session context">
+									<TuneRounded />
+									<span>Context</span>
 								</button>
+							</Tooltip>
+							<Tooltip title="Session references">
+								<button
+									type="button"
+									onClick={() => openTools('documents')}
+									aria-label="Session references"
+								>
+									<DescriptionOutlined />
+									<span>References</span>
+								</button>
+							</Tooltip>
+							{domain === 'finance' && (
+								<Tooltip title="Finance report">
+									<button type="button" onClick={() => openTools('report')} aria-label="Finance report">
+										<FactCheckOutlined />
+										<span>Report</span>
+									</button>
+								</Tooltip>
 							)}
 							<span className="advisor-demo-badge">Fictional demo</span>
 						</div>
@@ -756,29 +766,35 @@ const ConversationWorkspace = ({
 								rows={2}
 							/>
 							<div className="advisor-composer__footer">
-								<span>
+								<span className="advisor-composer-hint">
 									<ShieldOutlined />
 									Fictional demo data only
 								</span>
 								{isProcessing ? (
-									<button
-										className="advisor-send-button is-cancel"
-										type="button"
-										onClick={() => abortRef.current?.abort()}
-										aria-label="Cancel response"
-									>
-										<CloseRounded />
-									</button>
+									<Tooltip title="Cancel response">
+										<button
+											className="advisor-send-button is-cancel"
+											type="button"
+											onClick={() => abortRef.current?.abort()}
+											aria-label="Cancel response"
+										>
+											<CloseRounded />
+										</button>
+									</Tooltip>
 								) : (
-									<button
-										className="advisor-send-button"
-										type="button"
-										onClick={() => void sendMessage()}
-										disabled={!input.trim()}
-										aria-label="Send question"
-									>
-										<ArrowUpwardRounded />
-									</button>
+									<Tooltip title="Send question">
+										<span className="advisor-send-tooltip">
+											<button
+												className="advisor-send-button"
+												type="button"
+												onClick={() => void sendMessage()}
+												disabled={!input.trim()}
+												aria-label="Send question"
+											>
+												<ArrowUpwardRounded />
+											</button>
+										</span>
+									</Tooltip>
 								)}
 							</div>
 						</div>
@@ -898,13 +914,15 @@ export function AdvisorWorkspacePage() {
 					fullWidth
 					slotProps={{ paper: { className: 'advisor-auth-dialog' } }}
 				>
-					<IconButton
-						onClick={closeLoginModal}
-						aria-label="Close sign in"
-						sx={{ position: 'absolute', right: 10, top: 10, zIndex: 2 }}
-					>
-						<CloseRounded />
-					</IconButton>
+					<Tooltip title="Close sign in">
+						<IconButton
+							onClick={closeLoginModal}
+							aria-label="Close sign in"
+							sx={{ position: 'absolute', right: 10, top: 10, zIndex: 2 }}
+						>
+							<CloseRounded />
+						</IconButton>
+					</Tooltip>
 					<DialogContent>
 						<AuthPage preBuiltUIList={[EmailPasswordPreBuiltUI]} />
 					</DialogContent>
@@ -924,14 +942,16 @@ export function AdvisorWorkspacePage() {
 						<span className="advisor-wordmark__mark">G</span>
 						<span>grounded</span>
 					</button>
-					<button
-						className="advisor-mobile-close"
-						type="button"
-						onClick={() => setMobileMenuOpen(false)}
-						aria-label="Close menu"
-					>
-						<CloseRounded />
-					</button>
+					<Tooltip title="Close navigation">
+						<button
+							className="advisor-mobile-close"
+							type="button"
+							onClick={() => setMobileMenuOpen(false)}
+							aria-label="Close menu"
+						>
+							<CloseRounded />
+						</button>
+					</Tooltip>
 				</div>
 
 				<button
@@ -1001,9 +1021,11 @@ export function AdvisorWorkspacePage() {
 						<strong>{userProfile?.showName || 'Demo user'}</strong>
 						<span>Signed in</span>
 					</div>
-					<button type="button" onClick={() => void logout()} aria-label="Sign out">
-						<LogoutRounded />
-					</button>
+					<Tooltip title="Sign out">
+						<button type="button" onClick={() => void logout()} aria-label="Sign out">
+							<LogoutRounded />
+						</button>
+					</Tooltip>
 				</div>
 			</aside>
 
@@ -1018,9 +1040,11 @@ export function AdvisorWorkspacePage() {
 
 			<div className="advisor-main-shell">
 				<header className="advisor-mobile-header">
-					<button type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
-						<MenuRounded />
-					</button>
+					<Tooltip title="Open navigation">
+						<button type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
+							<MenuRounded />
+						</button>
+					</Tooltip>
 					<span>grounded</span>
 					<span
 						className="advisor-mobile-domain"

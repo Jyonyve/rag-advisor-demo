@@ -13,6 +13,7 @@ import {
 import { characterStore } from '../store/characterStore.js';
 import { chatStore } from '../store/chatStore.js';
 import { documentStore } from '../store/documentStore.js';
+import { loreStore } from '../store/loreStore.js';
 import { profileStore } from '../store/profileStore.js';
 import { detectLanguage } from '../util/languageUtils.js';
 import { buildDocumentSourceRefs } from './documentGenerationService.js';
@@ -53,6 +54,17 @@ const getEligibleProducts = (context: ResolvedRagContext): Map<string, LoreInfo>
 			})
 			.map((lore) => [lore.fixtureId!, lore])
 	);
+
+export const mergeFinanceReportLore = (
+	retrievedLore: readonly LoreInfo[],
+	characterLore: readonly LoreInfo[]
+): LoreInfo[] => {
+	const merged = new Map(retrievedLore.map((lore) => [lore.loreId, lore]));
+	for (const lore of characterLore) {
+		if (!merged.has(lore.loreId)) merged.set(lore.loreId, lore);
+	}
+	return [...merged.values()];
+};
 
 export const validateFinanceReportEvidence = (
 	output: FinanceReportOutput,
@@ -197,12 +209,14 @@ The server adds the fixed demo disclaimer and authoritative assumptions/missing-
 
 export const financeReportService = {
 	generateDraft: async (input: FinanceReportDraftCreate, userId: string, session: SessionInfo) => {
-		const [characterResponse, chatResponse, profileResponse, aiModelInfo] = await Promise.all([
-			characterStore.getCharacter(session.characterId),
-			chatStore.getAllChatTurns(session.sessionId),
-			profileStore.getProfileBySessionId(session.sessionId),
-			modelCatalogService.resolveAiModelInfo(input.modelName),
-		]);
+		const [characterResponse, chatResponse, profileResponse, aiModelInfo, characterLoreResponse] =
+			await Promise.all([
+				characterStore.getCharacter(session.characterId),
+				chatStore.getAllChatTurns(session.sessionId),
+				profileStore.getProfileBySessionId(session.sessionId),
+				modelCatalogService.resolveAiModelInfo(input.modelName),
+				loreStore.getLoresByCharacter(session.characterId, userId),
+			]);
 		const character = characterResponse.characterInfo;
 		if (character.domain !== 'finance') {
 			throw new ApiError(400, 'Finance reports require the Finance Character.');
@@ -210,7 +224,7 @@ export const financeReportService = {
 		const recentTurns = chatResponse.chatTurns
 			.sort((a, b) => a.sequence - b.sequence)
 			.slice(-RECENT_CHAT_TURN);
-		const memories = await memoryEngine.recallRelevantMemories(
+		const retrievedMemories = await memoryEngine.recallRelevantMemories(
 			session.sessionId,
 			input.requestText,
 			userId,
@@ -223,6 +237,13 @@ export const financeReportService = {
 				sequence: recentTurns.at(-1)?.sequence ?? 0,
 			}
 		);
+		const memories = {
+			...retrievedMemories,
+			relevantLore: mergeFinanceReportLore(
+				retrievedMemories.relevantLore,
+				characterLoreResponse.loreInfos
+			),
+		};
 		const context = resolveRagContext({
 			sessionId: session.sessionId,
 			userId,

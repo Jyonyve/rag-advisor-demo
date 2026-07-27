@@ -1,0 +1,6 @@
+{
+	"files.watcherExclude": { "**/.vite_cache/**": true },
+	"search.exclude": { "**/.vite_cache/**": true },
+	"workbench.browser.openLocalhostLinks": true,
+	"workbench.browser.showInTitleBar": true
+}

@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+	buildDefaultFinanceReportRequest,
 	buildFinanceDomainProfile,
 	buildHealthcareDomainProfile,
 	countEvidenceKinds,
 	getSessionDomain,
 	summarizeDomainProfile,
 } from './workspaceConfig.js';
+import { parseReportMarkdown } from './reportMarkdownUtils.js';
 
 test('finance profile builder preserves the strict discriminator and omits missing suitability fields', () => {
 	assert.deepEqual(
@@ -90,6 +92,34 @@ test('evidence counts remain grouped by source kind', () => {
 		[
 			{ label: 'Official domain lore', count: 2 },
 			{ label: 'Session documents', count: 1 },
+		]
+	);
+});
+
+test('finance report request includes the canonical structured profile values', () => {
+	assert.equal(
+		buildDefaultFinanceReportRequest({
+			domain: 'finance',
+			investmentHorizonMonths: 36,
+			liquidityNeed: 'medium',
+			riskPreference: 'moderate',
+			constraints: [],
+		}),
+		'Compare the eligible fictional finance products for this session profile with a moderate-risk preference, a 36-month horizon, a medium liquidity need. Explain material risks and cite the supporting evidence.'
+	);
+});
+
+test('report Markdown parser exposes headings, notices, lists, and paragraphs as text blocks', () => {
+	assert.deepEqual(
+		parseReportMarkdown(
+			'# Demo report\n\n> Fictional only.\n\n## Risks\n\n- No guarantee\n- Limited liquidity\n\nPlain summary.'
+		),
+		[
+			{ type: 'heading', level: 1, text: 'Demo report' },
+			{ type: 'blockquote', text: 'Fictional only.' },
+			{ type: 'heading', level: 2, text: 'Risks' },
+			{ type: 'list', items: ['No guarantee', 'Limited liquidity'] },
+			{ type: 'paragraph', text: 'Plain summary.' },
 		]
 	);
 });

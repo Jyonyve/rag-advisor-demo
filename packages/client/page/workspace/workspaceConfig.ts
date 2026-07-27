@@ -85,6 +85,22 @@ export const EMPTY_HEALTHCARE_PROFILE: HealthcareProfileDraft = {
 	constraints: '',
 };
 
+export const buildDefaultFinanceReportRequest = (
+	profile: DomainSessionProfile | undefined
+): string => {
+	if (profile?.domain !== 'finance') {
+		return 'Compare the eligible fictional finance products for this session profile. Explain material risks and cite the supporting evidence.';
+	}
+
+	const details = [
+		profile.riskPreference && `${profile.riskPreference}-risk preference`,
+		profile.investmentHorizonMonths && `${profile.investmentHorizonMonths}-month horizon`,
+		profile.liquidityNeed && `${profile.liquidityNeed} liquidity need`,
+	].filter(Boolean);
+	const profileSummary = details.length ? ` with a ${details.join(', a ')}` : '';
+	return `Compare the eligible fictional finance products for this session profile${profileSummary}. Explain material risks and cite the supporting evidence.`;
+};
+
 const splitConstraints = (value: string): string[] =>
 	value
 		.split(/\r?\n|,/)
