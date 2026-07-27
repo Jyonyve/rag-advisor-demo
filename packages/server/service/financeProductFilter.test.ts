@@ -116,6 +116,59 @@ test('request override analysis recognizes bounded English and Korean horizon fo
 		analyzeFinanceRequestOverrides('투자 기간은 9개월로 가정').investmentHorizonMonths,
 		9
 	);
+	assert.equal(
+		analyzeFinanceRequestOverrides('만약 이 돈을 1년 뒤 이사 비용으로 써야 한다면 뭘 추천할래요?')
+			.investmentHorizonMonths,
+		12
+	);
+	assert.equal(
+		analyzeFinanceRequestOverrides('5년 이상 투자한다는 조건으로 다시 추천해 주세요.')
+			.investmentHorizonMonths,
+		60
+	);
+});
+
+test('request override analysis recognizes natural Korean risk and liquidity conditions', () => {
+	assert.deepEqual(
+		analyzeFinanceRequestOverrides(
+			'평소에는 공격적으로 투자하지만, 이번 돈만큼은 원금 손실을 피하고 싶어요.'
+		),
+		{ investmentHorizonMonths: undefined, liquidityNeed: undefined, riskPreference: 'conservative' }
+	);
+	assert.equal(
+		analyzeFinanceRequestOverrides('원금 손실은 조금 감수할 수 있어요. 어떤 선택지가 있나요?')
+			.riskPreference,
+		'moderate'
+	);
+	assert.equal(
+		analyzeFinanceRequestOverrides('당분간 현금이 필요해서 유동성을 높게 설정해 주세요.')
+			.liquidityNeed,
+		'high'
+	);
+});
+
+test('natural temporary conditions override filtering without mutating the saved profile', () => {
+	const profile: FinancialSessionProfile = {
+		domain: 'finance',
+		investmentHorizonMonths: 60,
+		liquidityNeed: 'low',
+		riskPreference: 'growth',
+		constraints: [],
+	};
+	const result = filterFinanceLore(
+		financeLores,
+		profile,
+		'만약 이 돈을 1년 뒤 이사 비용으로 써야 한다면 뭘 추천할래요? 이건 프로필에 저장하지 마세요.'
+	);
+
+	assert.equal(result.requestOverrides.investmentHorizonMonths, 12);
+	assert.equal(profile.investmentHorizonMonths, 60);
+	assert.deepEqual(
+		result.eligibleLore
+			.filter(({ structuredMetadata }) => structuredMetadata?.knowledgeType === 'product')
+			.map(({ fixtureId }) => fixtureId),
+		['cedar-reserve-account', 'saebom-six-month-deposit', 'daeon-one-year-savings']
+	);
 });
 
 test('product-term questions are not misclassified as personal request overrides', () => {

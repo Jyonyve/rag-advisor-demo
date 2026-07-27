@@ -131,6 +131,7 @@ export interface ChatTurn
 
 	request: ChatMessage;
 	response: ChatMessage;
+	ragEvidence?: RagEvidenceDto;
 }
 
 // Other interfaces like ChatMessage, ChatMessageSet, etc., remain the same.
@@ -186,4 +187,5 @@ export interface DisplayTurn {
 	updatedAt: string;
 	request: ChatMessage;
 	response: ChatMessage;
+	ragEvidence?: RagEvidenceDto;
 }

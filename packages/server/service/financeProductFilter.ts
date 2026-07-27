@@ -40,7 +40,11 @@ export const analyzeFinanceRequestOverrides = (message: string): FinanceRequestO
 	const hasPersonalHorizonIntent =
 		/\b(?:assume|assuming|if|for this answer|my (?:investment )?horizon|i (?:need|plan|expect|intend|can|will))\b/.test(
 			normalized
-		) || /(가정|내 투자 기간|제가? .*?(?:필요|계획|예정)|이번 답변)/.test(normalized);
+		) ||
+		/(가정|이번(?:에는| 돈)|투자\s*기간(?:은|을|이)|제가? .*?(?:필요|계획|예정)|이번 답변)/.test(
+			normalized
+		) ||
+		/(?:\d{1,3}\s*(?:개월|년)).*?(?:투자|모을|쓸|써야|사용|필요|계획|예정|조건)/.test(normalized);
 	const investmentHorizonMonths = hasPersonalHorizonIntent
 		? (monthValue ?? (yearValue ? yearValue * 12 : undefined))
 		: undefined;
@@ -50,7 +54,9 @@ export const analyzeFinanceRequestOverrides = (message: string): FinanceRequestO
 		/\b(?:i need high liquidity|assume high liquidity|my liquidity need is high|need (?:quick|immediate) access|withdraw anytime|emergency funds?)\b/.test(
 			normalized
 		) ||
-		/(높은 유동성(?:이)? 필요|즉시 인출|언제든(?:지)? 인출|비상 자금)/.test(normalized)
+		/(높은 유동성(?:이)? 필요|유동성을? 높게|즉시 인출|언제든(?:지)? 인출|비상\s*자금|중도에 .*?(?:빼|인출))/.test(
+			normalized
+		)
 	) {
 		liquidityNeed = 'high';
 	} else if (
@@ -69,14 +75,19 @@ export const analyzeFinanceRequestOverrides = (message: string): FinanceRequestO
 		/\b(?:i am conservative|assume (?:i am )?conservative|my (?:risk )?preference is conservative|low[- ]risk preference|i (?:want to )?avoid (?:most )?risk)\b/.test(
 			normalized
 		) ||
-		/(보수적(?:인 성향|으로 가정)|저위험 선호|위험 회피)/.test(normalized)
+		/(보수적(?:인 성향|으로 가정)|안정형|안정성을? (?:우선|중시)|저위험 선호|위험 회피|원금 손실(?:을|은)? .*?(?:피하고|피하|원하지 않|감당하지 못))/.test(
+			normalized
+		)
 	) {
 		riskPreference = 'conservative';
-	} else if (/\bmoderate risk preference\b/.test(normalized) || /중위험 선호/.test(normalized)) {
+	} else if (
+		/\bmoderate risk preference\b/.test(normalized) ||
+		/(중위험 선호|원금 손실(?:은|을)? .*?(?:조금|어느 정도) .*?감수)/.test(normalized)
+	) {
 		riskPreference = 'moderate';
 	} else if (
 		/\b(?:growth risk preference|high[- ]risk preference)\b/.test(normalized) ||
-		/(성장형 선호|고위험 선호)/.test(normalized)
+		/(성장형 선호|고위험 선호|공격적(?:인|으로)? 투자)/.test(normalized)
 	) {
 		riskPreference = 'growth';
 	}

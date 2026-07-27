@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { ChatTurnCdo } from '@rag-advisor-demo/shared/domain';
+import type { ChatTurnCdo, RagEvidenceDto } from '@rag-advisor-demo/shared/domain';
 import { createBasicChatTurn } from '@rag-advisor-demo/shared/util';
 import { REQUEST_CHARACTER_LIMIT } from '@rag-advisor-demo/shared/config';
 import {
@@ -11,6 +11,25 @@ import {
 } from './schemaUtils.js';
 
 const sessionId = 'finance_demo_session';
+
+const ragEvidence: RagEvidenceDto = {
+	domain: 'finance',
+	characterId: 'finance_demo',
+	sessionId,
+	profileFieldsUsed: [],
+	items: [
+		{
+			sourceKind: 'character_lore',
+			sourceId: 'demo-product_demo-lore',
+			label: 'DEMO product',
+			domain: 'finance',
+		},
+	],
+	excluded: [],
+	structuredFilterDecisions: [],
+	missingInformation: [],
+	assumptions: [],
+};
 
 test('glossary extraction schema accepts canonical Korean and English mappings', () => {
 	const result = createGlossaryExtractionSchema().parse({
@@ -52,8 +71,8 @@ test('ChatTurnCdoSchema accepts lifecycle placeholders from temporary turns', ()
 		userId: 'user-1',
 		sessionId,
 		sequence: 9,
-		request: buildMessage('request'),
-		response: buildMessage('response'),
+		request: buildMessage('request') as ChatTurnCdo['request'],
+		response: buildMessage('response') as ChatTurnCdo['response'],
 	});
 
 	assert.equal(result.success, true);
@@ -66,6 +85,19 @@ test('ChatTurnCdoSchema accepts lifecycle placeholders from temporary turns', ()
 	assert.notEqual(turn.request.updatedAt, '');
 	assert.notEqual(turn.response.createdAt, '');
 	assert.notEqual(turn.response.updatedAt, '');
+});
+
+test('basic finalized turns preserve server-attached sanitized RAG evidence', () => {
+	const turn = createBasicChatTurn({
+		userId: 'user-1',
+		sessionId,
+		sequence: 9,
+		request: buildMessage('request') as ChatTurnCdo['request'],
+		response: buildMessage('response') as ChatTurnCdo['response'],
+		ragEvidence,
+	});
+
+	assert.deepEqual(turn.ragEvidence, ragEvidence);
 });
 
 test('ChatTurnCdoSchema still rejects mismatched nested message identity', () => {

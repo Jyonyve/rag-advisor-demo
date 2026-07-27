@@ -21,6 +21,7 @@ import type {
 	ChatTurnCdo,
 	ProfileInfo,
 	RagEvidenceDto,
+	RagEvidenceItem,
 	SessionInfo,
 	TempChatTurn,
 } from '@rag-advisor-demo/shared/domain';
@@ -32,6 +33,8 @@ import { AuthPage } from 'supertokens-auth-react/ui/index.js';
 
 import {
 	useCharacterApi,
+	useDocumentApi,
+	useLoreApi,
 	useOrchestrationApi,
 	useProfileApi,
 	useSessionApi,
@@ -41,6 +44,7 @@ import { useChatState } from '../../hook/state/useChatState.js';
 import { useAuth } from '../../provider/AuthProvider.jsx';
 import { useLanguage } from '../../provider/LanguageProvider.js';
 import { parseEntriesToText, parseTextToEntries } from '../../util/chatParseUtils.js';
+import { getEvidenceAnchorId, GroundedResponse } from './GroundedResponse.js';
 import {
 	buildFinanceDomainProfile,
 	buildHealthcareDomainProfile,
@@ -51,8 +55,10 @@ import {
 	EMPTY_HEALTHCARE_PROFILE,
 	type FinanceProfileDraft,
 	getSessionDomain,
+	getSessionDisplayTitle,
 	type HealthcareProfileDraft,
 	summarizeDomainProfile,
+	stripFinanceAnswerNotices,
 	WORKSPACE_DOMAINS,
 } from './workspaceConfig.js';
 import { WorkspaceToolsDialog, type WorkspaceToolTab } from './WorkspaceToolsDialog.js';
@@ -198,7 +204,7 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 				characterId,
 				firstCharMessage: character.firstMessage,
 				contentPolicy: 'general',
-				title: domain === 'finance' ? 'Finance product exploration' : 'Healthcare operations workflow',
+				title: WORKSPACE_DOMAINS[domain].sessionTitle,
 			});
 			const { profileId } = await storeProfile(buildProfileCdo({ userId, sessionId, domainProfile }));
 			await initSessionProfileId({ sessionId, profileId });
@@ -406,28 +412,198 @@ const NewSessionPanel = ({ domain, userId, onDomainChange }: NewSessionPanelProp
 	);
 };
 
+const EvidenceSourceDetail = ({
+	item,
+	content,
+	metadata,
+	isLoading,
+	isError,
+	onClose,
+}: {
+	item: RagEvidenceItem;
+	content?: string;
+	metadata?: unknown;
+	isLoading: boolean;
+	isError: boolean;
+	onClose: () => void;
+}) => {
+	const { lang } = useLanguage();
+	const text = getWorkspaceCopy(lang);
+	return (
+		<div className="advisor-source-detail">
+			<div className="advisor-source-detail__header">
+				<div>
+					<span>
+						{item.sourceKind === 'character_lore'
+							? text.originalLore
+							: item.sourceKind === 'session_document'
+								? text.originalDocument
+								: text.sourceContent}
+					</span>
+					<strong>{item.label}</strong>
+				</div>
+				<Tooltip title={text.closeSource}>
+					<IconButton size="small" onClick={onClose} aria-label={text.closeSource}>
+						<CloseRounded />
+					</IconButton>
+				</Tooltip>
+			</div>
+			<dl className="advisor-source-detail__metadata">
+				<div>
+					<dt>{text.sourceIdentifier}</dt>
+					<dd>{item.sourceId}</dd>
+				</div>
+				{item.publicSource && (
+					<>
+						<div>
+							<dt>{text.publicSource}</dt>
+							<dd>{item.publicSource.authority}</dd>
+						</div>
+						<div>
+							<dt>{text.asOf}</dt>
+							<dd>{item.publicSource.dataAsOf}</dd>
+						</div>
+						<div>
+							<dt>{text.documentType}</dt>
+							<dd>{item.publicSource.documentType}</dd>
+						</div>
+						{item.publicSource.publishedAt && (
+							<div>
+								<dt>{text.published}</dt>
+								<dd>{item.publicSource.publishedAt}</dd>
+							</div>
+						)}
+						<div>
+							<dt>{text.license}</dt>
+							<dd>{item.publicSource.license}</dd>
+						</div>
+					</>
+				)}
+			</dl>
+			{item.sourceKind === 'chat_memory' ? (
+				<p className="advisor-source-detail__status">{text.memorySourceHint}</p>
+			) : isLoading ? (
+				<p className="advisor-source-detail__status">{text.loadingSource}</p>
+			) : isError || !content ? (
+				<p className="advisor-source-detail__status">{text.sourceUnavailable}</p>
+			) : (
+				<section className="advisor-source-detail__body">
+					<h4>
+						{item.sourceKind === 'character_lore'
+							? text.loreBody
+							: item.sourceKind === 'session_document'
+								? text.documentBody
+								: text.sourceBody}
+					</h4>
+					<div className="advisor-source-detail__content">{content}</div>
+				</section>
+			)}
+			{metadata !== undefined && metadata !== null && (
+				<details className="advisor-source-detail__raw-metadata">
+					<summary>{text.sourceMetadata}</summary>
+					<pre>{JSON.stringify(metadata, null, 2)}</pre>
+				</details>
+			)}
+			{item.publicSource && (
+				<a
+					className="advisor-source-detail__link"
+					href={item.publicSource.sourceUrl}
+					target="_blank"
+					rel="noreferrer"
+				>
+					{text.publicSource}
+				</a>
+			)}
+		</div>
+	);
+};
+
 const EvidenceInspector = ({
 	profile,
 	evidence,
 	domain,
+	focusSourceId,
+	focusSourceVersion,
+	question,
+	mobileOpen,
+	onMobileClose,
 }: {
 	profile?: ProfileInfo;
 	evidence?: RagEvidenceDto;
 	domain: AssistantDomain;
+	focusSourceId?: string;
+	focusSourceVersion: number;
+	question?: string;
+	mobileOpen: boolean;
+	onMobileClose: () => void;
 }) => {
 	const { lang } = useLanguage();
 	const text = getWorkspaceCopy(lang);
 	const config = getWorkspaceDomainConfig(domain, lang);
 	const profileSummary = summarizeDomainProfile(profile?.domainProfile, lang);
 	const evidenceKinds = countEvidenceKinds(evidence, lang);
+	const [selectedSourceId, setSelectedSourceId] = useState<string>();
+	const selectedSource = evidence?.items.find(({ sourceId }) => sourceId === selectedSourceId);
+	const loreQuery = useLoreApi().getLore(
+		selectedSource?.sourceKind === 'character_lore' ? selectedSource.sourceId : ''
+	);
+	const documentQuery = useDocumentApi().getDocumentsBySession(evidence?.sessionId ?? '');
+	const selectedDocument =
+		selectedSource?.sourceKind === 'session_document'
+			? documentQuery.data?.documentInfos.find(
+					({ documentId }) => documentId === selectedSource.sourceId
+				)
+			: undefined;
+	const sourceContent =
+		selectedSource?.sourceKind === 'character_lore'
+			? loreQuery.data?.loreContent || loreQuery.data?.loreInfo?.content
+			: selectedDocument?.body;
+	const sourceLoading =
+		selectedSource?.sourceKind === 'character_lore'
+			? loreQuery.isLoading
+			: selectedSource?.sourceKind === 'session_document'
+				? documentQuery.isLoading
+				: false;
+	const sourceFailed =
+		selectedSource?.sourceKind === 'character_lore'
+			? loreQuery.isError
+			: selectedSource?.sourceKind === 'session_document'
+				? documentQuery.isError
+				: false;
+
+	useEffect(() => {
+		if (selectedSourceId && !evidence?.items.some(({ sourceId }) => sourceId === selectedSourceId)) {
+			setSelectedSourceId(undefined);
+		}
+	}, [evidence, selectedSourceId]);
+
+	useEffect(() => {
+		setSelectedSourceId(
+			focusSourceId && evidence?.items.some(({ sourceId }) => sourceId === focusSourceId)
+				? focusSourceId
+				: undefined
+		);
+	}, [evidence, focusSourceId, focusSourceVersion]);
 	return (
-		<aside className="advisor-inspector">
+		<aside className={`advisor-inspector${mobileOpen ? ' is-mobile-open' : ''}`}>
 			<div className="advisor-inspector__top">
 				<span>{text.trace}</span>
-				<span className={`advisor-live-state${evidence ? ' is-active' : ''}`}>
-					<i />
-					{evidence ? text.evidenceReady : text.awaitingQuestion}
-				</span>
+				<div className="advisor-inspector__top-actions">
+					<span className={`advisor-live-state${evidence ? ' is-active' : ''}`}>
+						<i />
+						{evidence ? text.evidenceReady : text.awaitingQuestion}
+					</span>
+					<Tooltip title={text.closeEvidence}>
+						<IconButton
+							className="advisor-inspector__mobile-close"
+							size="small"
+							onClick={onMobileClose}
+							aria-label={text.closeEvidence}
+						>
+							<CloseRounded />
+						</IconButton>
+					</Tooltip>
+				</div>
 			</div>
 
 			<section className="advisor-inspector__section">
@@ -450,6 +626,12 @@ const EvidenceInspector = ({
 					<FactCheckOutlined />
 					<h3>{text.retrievedEvidence}</h3>
 				</div>
+				{question && (
+					<div className="advisor-inspector__question">
+						<span>{text.evidenceForQuestion}</span>
+						<p>{question}</p>
+					</div>
+				)}
 				{evidence?.items.length ? (
 					<>
 						<div className="advisor-evidence-counts">
@@ -462,23 +644,30 @@ const EvidenceInspector = ({
 						</div>
 						<ul className="advisor-source-list">
 							{evidence.items.map((item) => (
-								<li key={`${item.sourceKind}-${item.sourceId}`}>
-									<span className="advisor-source-list__dot" style={{ background: config.accent }} />
-									<div>
-										<strong>{item.label}</strong>
-										<small>
-											{item.origin
-												? `${item.origin === 'manual' ? text.manual : text.generated} ${text.document}`
-												: item.publicSource
-													? `${item.publicSource.authority} · ${text.asOf} ${item.publicSource.dataAsOf}`
-													: item.sourceKind.replaceAll('_', ' ')}
-										</small>
-										{item.publicSource && (
-											<a href={item.publicSource.sourceUrl} target="_blank" rel="noreferrer">
-												{text.publicSource}
-											</a>
-										)}
-									</div>
+								<li
+									id={getEvidenceAnchorId(item.sourceId)}
+									key={`${item.sourceKind}-${item.sourceId}`}
+									className={selectedSourceId === item.sourceId ? 'is-selected' : undefined}
+								>
+									<button
+										className="advisor-source-list__button"
+										type="button"
+										onClick={() => setSelectedSourceId(item.sourceId)}
+										aria-label={`${text.viewEvidence}: ${item.label}`}
+									>
+										<span className="advisor-source-list__dot" style={{ background: config.accent }} />
+										<div>
+											<strong>{item.label}</strong>
+											<small>
+												{item.origin
+													? `${item.origin === 'manual' ? text.manual : text.generated} ${text.document}`
+													: item.publicSource
+														? `${item.publicSource.authority} · ${text.asOf} ${item.publicSource.dataAsOf}`
+														: item.sourceKind.replaceAll('_', ' ')}
+											</small>
+											<span className="advisor-source-list__action">{text.viewEvidence}</span>
+										</div>
+									</button>
 								</li>
 							))}
 						</ul>
@@ -510,6 +699,30 @@ const EvidenceInspector = ({
 					</div>
 				</section>
 			)}
+			<Dialog
+				className="advisor-source-dialog"
+				open={Boolean(selectedSource)}
+				onClose={() => setSelectedSourceId(undefined)}
+				fullWidth
+				maxWidth="md"
+			>
+				<DialogContent>
+					{selectedSource && (
+						<EvidenceSourceDetail
+							item={selectedSource}
+							content={sourceContent}
+							metadata={
+								selectedSource.sourceKind === 'character_lore'
+									? loreQuery.data?.loreInfo?.structuredMetadata
+									: undefined
+							}
+							isLoading={sourceLoading}
+							isError={sourceFailed}
+							onClose={() => setSelectedSourceId(undefined)}
+						/>
+					)}
+				</DialogContent>
+			</Dialog>
 		</aside>
 	);
 };
@@ -540,6 +753,7 @@ const ConversationWorkspace = ({
 	const nextPersistedSequence = isLoadingHistory ? -1 : getNextSequence();
 	const { data: tempResponse } = getTempChatTurn(session.sessionId, nextPersistedSequence);
 	const [input, setInput] = useState('');
+	const [pendingQuestion, setPendingQuestion] = useState('');
 	const [streamingText, setStreamingText] = useState('');
 	const [stage, setStage] = useState<ChatGenerationStage>();
 	const [isProcessing, setIsProcessing] = useState(false);
@@ -547,6 +761,11 @@ const ConversationWorkspace = ({
 	const abortRef = useRef<AbortController | undefined>(undefined);
 	const [toolsOpen, setToolsOpen] = useState(false);
 	const [toolTab, setToolTab] = useState<WorkspaceToolTab>('profile');
+	const [inspectedEvidence, setInspectedEvidence] = useState<RagEvidenceDto>();
+	const [inspectedSourceId, setInspectedSourceId] = useState<string>();
+	const [inspectedSourceVersion, setInspectedSourceVersion] = useState(0);
+	const [inspectedQuestion, setInspectedQuestion] = useState<string>();
+	const [inspectorMobileOpen, setInspectorMobileOpen] = useState(false);
 
 	useEffect(() => {
 		if (tempResponse?.tempChatTurn) changeTempChatTurn(tempResponse.tempChatTurn);
@@ -586,6 +805,7 @@ const ConversationWorkspace = ({
 		const trimmed = prompt.trim();
 		if (!trimmed || !userId || isProcessing) return;
 		setError(undefined);
+		setPendingQuestion(trimmed);
 		setInput('');
 		setStreamingText('');
 		setStage('preparing');
@@ -626,6 +846,7 @@ const ConversationWorkspace = ({
 			setIsProcessing(false);
 			setStreamingText('');
 			setStage(undefined);
+			setPendingQuestion('');
 		}
 	};
 
@@ -634,6 +855,7 @@ const ConversationWorkspace = ({
 			key: `fixed-${turn.sequence}`,
 			request: turn.request,
 			response: turn.response,
+			evidence: turn.ragEvidence,
 		})),
 		...(stateTempTurn?.chatTurnSets[0]
 			? [
@@ -641,11 +863,45 @@ const ConversationWorkspace = ({
 						key: `temp-${stateTempTurn.sequence}`,
 						request: stateTempTurn.chatTurnSets[0].request,
 						response: stateTempTurn.chatTurnSets[0].response,
+						evidence: stateTempTurn.ragEvidence,
 					},
 				]
 			: []),
 	];
-	const latestEvidence = stateTempTurn?.ragEvidence;
+	const latestTurn = displayTurns[displayTurns.length - 1];
+	const latestEvidence = latestTurn?.evidence;
+	const latestQuestion = latestTurn ? parseEntriesToText(latestTurn.request.entries) : undefined;
+	useEffect(() => {
+		setInspectedEvidence(latestEvidence);
+		setInspectedQuestion(latestQuestion);
+		setInspectedSourceId(undefined);
+		setInspectedSourceVersion((current) => current + 1);
+	}, [latestEvidence, latestQuestion]);
+	const inspectTurnEvidence = (evidence: RagEvidenceDto | undefined, question: string) => {
+		if (!evidence) return;
+		setInspectedEvidence(evidence);
+		setInspectedQuestion(question);
+		setInspectedSourceId(undefined);
+		setInspectedSourceVersion((current) => current + 1);
+		if (window.matchMedia('(max-width: 900px)').matches) setInspectorMobileOpen(true);
+	};
+	const handleCitationClick = (
+		evidence: RagEvidenceDto | undefined,
+		question: string,
+		sourceId: string
+	) => {
+		if (!evidence) return;
+		setInspectedEvidence(evidence);
+		setInspectedQuestion(question);
+		setInspectedSourceId(sourceId);
+		setInspectedSourceVersion((current) => current + 1);
+		if (window.matchMedia('(max-width: 900px)').matches) setInspectorMobileOpen(true);
+		window.setTimeout(() => {
+			document
+				.getElementById(getEvidenceAnchorId(sourceId))
+				?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}, 0);
+	};
 	const openTools = (nextTab: WorkspaceToolTab) => {
 		setToolTab(nextTab);
 		setToolsOpen(true);
@@ -661,9 +917,21 @@ const ConversationWorkspace = ({
 								<span style={{ background: config.accent }} />
 								{config.eyebrow}
 							</p>
-							<h1>{session.title}</h1>
+							<h1>{getSessionDisplayTitle(session.title, domain, lang)}</h1>
 						</div>
 						<div className="advisor-conversation__actions">
+							<Tooltip title={text.evidence}>
+								<button
+									className="advisor-evidence-mobile-trigger"
+									type="button"
+									onClick={() => inspectTurnEvidence(latestEvidence, latestQuestion ?? '')}
+									disabled={!latestEvidence}
+									aria-label={text.evidence}
+								>
+									<FactCheckOutlined />
+									<span>{text.evidence}</span>
+								</button>
+							</Tooltip>
 							<Tooltip title={text.contextFull}>
 								<button type="button" onClick={() => openTools('profile')} aria-label={text.contextFull}>
 									<TuneRounded />
@@ -712,26 +980,50 @@ const ConversationWorkspace = ({
 								</div>
 							</div>
 						) : (
-							displayTurns.map((turn, index) => (
-								<article className="advisor-turn" key={turn.key}>
-									<div className="advisor-turn__index">{(index + 1).toString().padStart(2, '0')}</div>
-									<div className="advisor-turn__content">
-										<div className="advisor-message advisor-message--user">
-											<span>{text.yourQuestion}</span>
-											<p>{parseEntriesToText(turn.request.entries)}</p>
-										</div>
-										<div className="advisor-message advisor-message--assistant">
-											<div className="advisor-message__label">
-												<span className="advisor-assistant-mark">
-													<AutoAwesomeRounded />
-												</span>
-												<span>{text.groundedGuidance}</span>
+							displayTurns.map((turn, index) => {
+								const question = parseEntriesToText(turn.request.entries);
+								return (
+									<article className="advisor-turn" key={turn.key}>
+										<div className="advisor-turn__index">{(index + 1).toString().padStart(2, '0')}</div>
+										<div className="advisor-turn__content">
+											<div className="advisor-message advisor-message--user">
+												<span>{text.yourQuestion}</span>
+												<p>{question}</p>
 											</div>
-											<div className="advisor-response-copy">{parseEntriesToText(turn.response.entries)}</div>
+											<div className="advisor-message advisor-message--assistant">
+												<div className="advisor-message__label">
+													<span className="advisor-assistant-mark">
+														<AutoAwesomeRounded />
+													</span>
+													<span className="advisor-message__label-text">{text.groundedGuidance}</span>
+													{turn.evidence && (
+														<button
+															className="advisor-turn-evidence-button"
+															type="button"
+															onClick={() => inspectTurnEvidence(turn.evidence, question)}
+														>
+															<FactCheckOutlined />
+															{text.viewTurnEvidence}
+														</button>
+													)}
+												</div>
+												<div className="advisor-response-copy">
+													<GroundedResponse
+														text={
+															domain === 'finance'
+																? stripFinanceAnswerNotices(parseEntriesToText(turn.response.entries))
+																: parseEntriesToText(turn.response.entries)
+														}
+														evidence={turn.evidence}
+														citationLabel={text.citation}
+														onCitationClick={(sourceId) => handleCitationClick(turn.evidence, question, sourceId)}
+													/>
+												</div>
+											</div>
 										</div>
-									</div>
-								</article>
-							))
+									</article>
+								);
+							})
 						)}
 
 						{isProcessing && (
@@ -740,14 +1032,16 @@ const ConversationWorkspace = ({
 								<div className="advisor-turn__content">
 									<div className="advisor-message advisor-message--user">
 										<span>{text.yourQuestion}</span>
-										<p>{input || text.requestSubmitted}</p>
+										<p>{pendingQuestion || text.requestSubmitted}</p>
 									</div>
 									<div className="advisor-message advisor-message--assistant">
 										<div className="advisor-message__label">
 											<span className="advisor-assistant-mark is-pulsing">
 												<AutoAwesomeRounded />
 											</span>
-											<span>{stage ? text[stage].toUpperCase() : text.working}</span>
+											<span className="advisor-message__label-text">
+												{stage ? text[stage].toUpperCase() : text.working}
+											</span>
 										</div>
 										<div className="advisor-response-copy advisor-response-copy--streaming">
 											{streamingText || text.reviewingEvidence}
@@ -812,7 +1106,16 @@ const ConversationWorkspace = ({
 						</p>
 					</div>
 				</main>
-				<EvidenceInspector profile={profile} evidence={latestEvidence} domain={domain} />
+				<EvidenceInspector
+					profile={profile}
+					evidence={inspectedEvidence ?? latestEvidence}
+					domain={domain}
+					focusSourceId={inspectedSourceId}
+					focusSourceVersion={inspectedSourceVersion}
+					question={inspectedQuestion}
+					mobileOpen={inspectorMobileOpen}
+					onMobileClose={() => setInspectorMobileOpen(false)}
+				/>
 			</div>
 			<WorkspaceToolsDialog
 				open={toolsOpen}
@@ -1022,7 +1325,7 @@ export function AdvisorWorkspacePage() {
 									>
 										<i style={{ background: WORKSPACE_DOMAINS[domain].accent }} />
 										<span>
-											<strong>{session.title}</strong>
+											<strong>{getSessionDisplayTitle(session.title, domain, lang)}</strong>
 											<small>{formatSessionDate(session.updatedAt, lang)}</small>
 										</span>
 									</button>

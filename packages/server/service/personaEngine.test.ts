@@ -8,6 +8,7 @@ import { buildSessionId } from '@rag-advisor-demo/shared/util';
 import {
 	ensureDomainDemoDisclaimer,
 	FINANCE_DEMO_NOTICE,
+	FINANCE_DEMO_NOTICE_KO,
 	HEALTHCARE_OPERATIONS_DEMO_NOTICE,
 } from './orchestrationService.js';
 
@@ -28,6 +29,18 @@ test('finance chat responses receive a deterministic demo disclaimer when omitte
 	assert.equal(
 		ensureDomainDemoDisclaimer('This is not financial advice.', { domain: 'finance' }),
 		'This is not financial advice.'
+	);
+	assert.equal(
+		ensureDomainDemoDisclaimer('쉽게 비교해 드릴게요.', { domain: 'finance' }),
+		`쉽게 비교해 드릴게요.\n\n${FINANCE_DEMO_NOTICE_KO}`
+	);
+	assert.equal(
+		ensureDomainDemoDisclaimer('이 내용은 금융·법률 자문이 아닙니다.', { domain: 'finance' }),
+		'이 내용은 금융·법률 자문이 아닙니다.'
+	);
+	assert.equal(
+		ensureDomainDemoDisclaimer('이 내용은 금융 또는 법률 자문이 아닙니다.', { domain: 'finance' }),
+		'이 내용은 금융 또는 법률 자문이 아닙니다.'
 	);
 	assert.equal(
 		ensureDomainDemoDisclaimer('Administrative guidance.', { domain: 'healthcare_operations' }),
@@ -79,6 +92,8 @@ test('finance persona messages contain canonical eligible evidence and finance s
 	const prompt = messages.map(({ content }) => String(content)).join('\n');
 
 	assert.match(prompt, /not financial advice/i);
+	assert.match(prompt, /application footer already displays this notice/i);
+	assert.match(prompt, /do not repeat the general fictional-demo/i);
 	assert.match(prompt, /Canonical session profile/);
 	assert.match(prompt, new RegExp(cedar.loreId));
 	assert.match(prompt, /Canonical body:/);
@@ -87,6 +102,15 @@ test('finance persona messages contain canonical eligible evidence and finance s
 	assert.match(prompt, /attributed Korean public regulatory evidence/i);
 	assert.match(prompt, /KR-FCPA-20260102/);
 	assert.match(prompt, /law\.go\.kr/);
+	assert.match(prompt, /warm, approachable guide/i);
+	assert.match(prompt, /돈을 꺼내기 쉬운 정도/);
+	assert.match(prompt, /never place a bullet symbol on a line by itself/i);
+	assert.match(prompt, /Do not use Markdown tables/i);
+	assert.match(prompt, /cannot directly edit the saved profile/i);
+	assert.match(prompt, /offer to use the requested value temporarily/i);
+	assert.match(prompt, /어떤 정보가 궁금하신가요/);
+	assert.match(prompt, /minimum investment amounts/i);
+	assert.match(prompt, /retrieval similarity scores/i);
 	assert.doesNotMatch(prompt, /third-person limited narrator/i);
 	assert.equal(messages.at(-1)?.role, 'user');
 });

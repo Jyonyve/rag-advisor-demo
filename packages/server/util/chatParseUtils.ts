@@ -13,16 +13,15 @@ export const parseEntriesToConversation = (entries: ChatEntry[]): string =>
 export const parseConversationToEntries = (text: string): ChatEntry[] =>
 	parseChatEntries(text, 'quoted-dialogue');
 
-export const buildChatMessage = (
+export const buildChatMessageFromEntries = (
 	role: ChatRoleType,
 	sequence: number,
 	showName: string,
-	entriesString: string,
+	entries: ChatEntry[],
 	sessionId: string,
 	emotion?: EmotionValue,
 	model?: string
 ): ChatMessage => {
-	const entries = parseConversationToEntries(entriesString);
 	const messageType: ChatMessageType = role === 'user' ? 'request' : 'response';
 	return {
 		role,
@@ -38,4 +37,17 @@ export const buildChatMessage = (
 		type: 'message',
 		model: model || '',
 	};
+};
+
+export const buildChatMessage = (
+	role: ChatRoleType,
+	sequence: number,
+	showName: string,
+	entriesString: string,
+	sessionId: string,
+	emotion?: EmotionValue,
+	model?: string
+): ChatMessage => {
+	const entries = parseConversationToEntries(entriesString);
+	return buildChatMessageFromEntries(role, sequence, showName, entries, sessionId, emotion, model);
 };

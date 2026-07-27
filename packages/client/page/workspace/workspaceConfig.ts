@@ -17,6 +17,7 @@ export type WorkspaceDomainConfig = {
 	eyebrow: string;
 	title: string;
 	shortTitle: string;
+	sessionTitle: string;
 	description: string;
 	accent: string;
 	softAccent: string;
@@ -29,16 +30,17 @@ export const WORKSPACE_DOMAINS: Record<AssistantDomain, WorkspaceDomainConfig> =
 		eyebrow: 'Financial product guidance',
 		title: 'Compare fictional financial products with transparent evidence.',
 		shortTitle: 'Finance',
+		sessionTitle: 'Finance guide',
 		description:
 			'Explore suitability, liquidity, risk, and time horizon using a fully fictional product catalog.',
 		accent: '#f5a524',
 		softAccent: '#fff0c7',
 		suggestedPrompts: [
-			'Which fictional product best preserves access to an emergency fund?',
-			'Compare the demand deposit and six-month term deposit for a short goal.',
-			'Which fictional product supports monthly saving over one year?',
-			'Compare the three-year deposit and balanced portfolio for moderate risk.',
-			'What trade-offs come with the five-year growth portfolio?',
+			'I can invest 500,000 won each month. What might suit me?',
+			'I plan to save for about three years. Would a deposit or fund suit me better?',
+			'I have never invested before. Where should I start?',
+			'I need an emergency fund but also want to invest. How could I split the money?',
+			'How much of a deposit can be protected?',
 		],
 	},
 	healthcare_operations: {
@@ -46,6 +48,7 @@ export const WORKSPACE_DOMAINS: Record<AssistantDomain, WorkspaceDomainConfig> =
 		eyebrow: 'Healthcare operations guidance',
 		title: 'Navigate fictional administrative workflows with role-aware guidance.',
 		shortTitle: 'Healthcare ops',
+		sessionTitle: 'Healthcare operations guide',
 		description:
 			'Review operational procedures for scheduling, records, billing, discharge, and system access.',
 		accent: '#34c6b3',
@@ -57,6 +60,48 @@ export const WORKSPACE_DOMAINS: Record<AssistantDomain, WorkspaceDomainConfig> =
 		],
 	},
 };
+
+const DEFAULT_SESSION_TITLES: Record<AssistantDomain, readonly string[]> = {
+	finance: ['Finance product exploration', 'Finance guidance', 'Finance guide'],
+	healthcare_operations: [
+		'Healthcare operations workflow',
+		'Healthcare operations guidance',
+		'Healthcare operations guide',
+	],
+};
+
+export const getSessionDisplayTitle = (
+	title: string,
+	domain: AssistantDomain,
+	lang: LangCode
+): string => {
+	if (!title || DEFAULT_SESSION_TITLES[domain].includes(title)) {
+		return lang === 'kor'
+			? domain === 'finance'
+				? '금융 상품 알아보기'
+				: '의료 운영 절차 알아보기'
+			: WORKSPACE_DOMAINS[domain].sessionTitle;
+	}
+	return title;
+};
+
+const isFinanceAnswerNotice = (paragraph: string): boolean => {
+	const normalized = paragraph.replace(/\s+/g, ' ').trim();
+	const hasDemoMarker = /(?:fictional|demo|가상|데모)/i.test(normalized);
+	const hasAdviceNotice =
+		/(?:not financial advice|not financial or legal advice|금융(?:\s*(?:·|또는)\s*법률)?\s*자문이\s*아닙니다)/i.test(
+			normalized
+		);
+	return hasDemoMarker && hasAdviceNotice;
+};
+
+export const stripFinanceAnswerNotices = (value: string): string =>
+	value
+		.replace(/\r\n|\r/g, '\n')
+		.split(/\n{2,}/)
+		.filter((paragraph) => !isFinanceAnswerNotice(paragraph))
+		.join('\n\n')
+		.trim();
 
 export type FinanceProfileDraft = {
 	investmentGoal: string;

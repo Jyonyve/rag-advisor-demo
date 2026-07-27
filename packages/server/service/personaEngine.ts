@@ -69,7 +69,12 @@ export const personaEngine = {
 			options?.adultContentEnabled
 		);
 
-		const personaSchema = createPersonaResponseSchema(charName, userName, langCode);
+		const personaSchema = createPersonaResponseSchema(
+			charName,
+			userName,
+			langCode,
+			characterInfo.domain
+		);
 		flowLogger.info('personaEngine', 'generateResponse.start', {
 			...logContext,
 			messageCount: messages.length,

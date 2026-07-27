@@ -1,4 +1,5 @@
 import { curatedEmotionKeywords, REQUEST_CHARACTER_LIMIT } from '@rag-advisor-demo/shared/config';
+import type { AssistantDomain } from '@rag-advisor-demo/shared/domain';
 import { convertArrayToString } from '@rag-advisor-demo/shared/util';
 import z from 'zod';
 
@@ -152,7 +153,8 @@ const emotionList = createEmotionList();
 export const createPersonaResponseSchema = (
 	charName: string,
 	userName: string,
-	langCode: 'kor' | 'eng' = 'kor'
+	langCode: 'kor' | 'eng' = 'kor',
+	domain?: AssistantDomain
 ) =>
 	z
 		.object({
@@ -166,9 +168,13 @@ export const createPersonaResponseSchema = (
 			response: z
 				.string()
 				.describe(
-					langCode === 'kor'
-						? `${charName}의 3인칭 서술. 가장 앞선 직접 대화 근거의 화자, 행위자, 대상, 행위 방향을 보존한다. groundingDecision이 contradicted이면 거짓 전제를 명확히 부정하고 뒤에서 다시 인정하지 않는다. uncertain이면 설정이나 기록을 언급하지 않고 인물답게 짧게 확인한다. 1000-2000자. 서술은 '~다'로 끝남. 문단 변경, 대화시 줄바꿈(\\n) 사용.`
-						: `Third-person narration for ${charName}. Preserve the speaker, actor, recipient, and action direction from the earliest direct conversation evidence. If groundingDecision is contradicted, explicitly deny the false premise and never admit it later. If uncertain, ask briefly in character without mentioning settings or records. 1000-2000 chars. Use \\n between narration/dialogue/paragraph.`
+					domain === 'finance' && langCode === 'kor'
+						? `친근한 금융 길잡이가 일반 사용자에게 직접 설명하는 쉬운 한국어 답변. 먼저 결론을 한두 문장으로 말한다. 유동성은 '필요할 때 돈을 꺼내기 쉬운 정도', 환매는 '펀드를 팔아 돈을 돌려받는 것', 변동성은 '가격이 오르내릴 가능성', 적합성은 '내 상황에 맞는지'처럼 바로 풀어 쓴다. 한 문장은 짧게 유지하고 400-900자 내외로 작성한다. 짧은 소제목, 문단 사이 빈 줄(\\n\\n), '- 문장' 형태의 하이픈 목록을 사용한다. Markdown 표, 줄에 혼자 있는 글머리표, 전체 응답을 감싸는 별표는 사용하지 않는다. 근거 ID는 관련 문장 뒤에 대괄호로 정확히 표시한다.`
+						: domain === 'finance'
+							? `Friendly, plain-language financial guidance written directly to a general user. Lead with a one- or two-sentence answer, define jargon immediately, and keep sentences short. Write about 400-900 characters using short headings, blank lines (\\n\\n), and hyphen lists. Do not use Markdown tables or wrap the response in asterisks. Put exact evidence IDs in square brackets after the supported claim.`
+							: langCode === 'kor'
+								? `${charName}의 3인칭 서술. 가장 앞선 직접 대화 근거의 화자, 행위자, 대상, 행위 방향을 보존한다. groundingDecision이 contradicted이면 거짓 전제를 명확히 부정하고 뒤에서 다시 인정하지 않는다. uncertain이면 설정이나 기록을 언급하지 않고 인물답게 짧게 확인한다. 1000-2000자. 서술은 '~다'로 끝남. 문단 변경, 대화시 줄바꿈(\\n) 사용.`
+								: `Third-person narration for ${charName}. Preserve the speaker, actor, recipient, and action direction from the earliest direct conversation evidence. If groundingDecision is contradicted, explicitly deny the false premise and never admit it later. If uncertain, ask briefly in character without mentioning settings or records. 1000-2000 chars. Use \\n between narration/dialogue/paragraph.`
 				),
 			emotion: z.enum(emotionList).describe('Single emotion word from the provided list.'),
 		})

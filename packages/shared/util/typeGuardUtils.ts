@@ -109,7 +109,9 @@ export const createBasicUserInfo = (cdo: UserCdo): UserInfo => {
 	};
 };
 
-export const createBasicChatTurn = (cdo: ChatTurnCdo): ChatTurn => {
+export const createBasicChatTurn = (
+	cdo: ChatTurnCdo & { ragEvidence?: ChatTurn['ragEvidence'] }
+): ChatTurn => {
 	const now = new Date().toISOString();
 	const chatTurnId = buildChatTurnId(cdo.sessionId, cdo.sequence);
 	const profileId = buildProfileId(cdo.sessionId, cdo.userId);

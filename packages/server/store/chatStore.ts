@@ -34,6 +34,7 @@ const toDisplayTurn = (turn: ChatTurn): DisplayTurn => ({
 	updatedAt: turn.updatedAt,
 	request: turn.request,
 	response: turn.response,
+	ragEvidence: turn.ragEvidence,
 });
 
 const toResponse = (items: ChatTurn[], displayOnly = false): ChatResponse => ({

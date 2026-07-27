@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseChatEntries, serializeChatEntries } from '@rag-advisor-demo/shared/util';
-import { parseConversationToEntries, parseEntriesToConversation } from './chatParseUtils.js';
+import {
+	buildChatMessageFromEntries,
+	parseConversationToEntries,
+	parseEntriesToConversation,
+} from './chatParseUtils.js';
 import { sanitizeLlmResponse } from './llmUtils.js';
 
 test('shared chat codec parses asterisk actions and unwrapped dialogue', () => {
@@ -60,4 +64,17 @@ test('LLM response sanitization delegates classification to the shared codec', (
 		{ type: 'action', prompt: 'He pauses.' },
 		{ type: 'dialogue', prompt: 'I remember.' },
 	]);
+});
+
+test('domain response messages preserve dialogue paragraphs without action conversion', () => {
+	const prompt = '먼저 결론입니다.\n\n- 첫 번째 차이\n- 두 번째 차이';
+	const message = buildChatMessageFromEntries(
+		'assistant',
+		1,
+		'Finance Assistant',
+		[{ type: 'dialogue', prompt }],
+		'finance-assistant_demo_session'
+	);
+
+	assert.deepEqual(message.entries, [{ type: 'dialogue', prompt }]);
 });

@@ -9,6 +9,7 @@ import { asc, eq, inArray } from 'drizzle-orm';
 import { getDatabase } from '../db/postgresClient.js';
 import { finalizationJobs } from '../db/schema.js';
 import { chatStore } from '../store/chatStore.js';
+import { tempStore } from '../store/tempStore.js';
 import { BackgroundJobQueue } from '../util/backgroundJobQueue.js';
 import { flowLogger, serializeError } from '../util/jsonlLogger.js';
 import { enrichChatTurn } from './orchestrationService.js';
@@ -29,7 +30,27 @@ const toDisplayTurn = (turn: ChatTurn): DisplayTurn => ({
 	updatedAt: turn.updatedAt,
 	request: turn.request,
 	response: turn.response,
+	ragEvidence: turn.ragEvidence,
 });
+
+const attachServerRagEvidence = async (
+	input: ChatTurnCdo
+): Promise<ChatTurnCdo & { ragEvidence?: ChatTurn['ragEvidence'] }> => {
+	const { ragEvidence: _untrustedEvidence, ...safeInput } = input as ChatTurnCdo & {
+		ragEvidence?: ChatTurn['ragEvidence'];
+	};
+	try {
+		const response = await tempStore.getTempChatTurn(safeInput.sessionId, safeInput.sequence);
+		return { ...safeInput, ragEvidence: response.tempChatTurn.ragEvidence };
+	} catch (error) {
+		flowLogger.warn('finalizationJobService', 'ragEvidence.unavailable', {
+			sessionId: safeInput.sessionId,
+			turn: safeInput.sequence,
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return safeInput;
+	}
+};
 
 const persistFinalizationJob = async (
 	job: FinalizationJobSnapshot,
@@ -132,7 +153,8 @@ const findFinalizedTurn = async (chatTurnId: string): Promise<ChatTurn | undefin
 
 export const finalizationJobService = {
 	async enqueue(chatTurnCdo: ChatTurnCdo): Promise<EnqueueFinalizationResponse> {
-		const basicTurn = createBasicChatTurn(chatTurnCdo);
+		const trustedInput = await attachServerRagEvidence(chatTurnCdo);
+		const basicTurn = createBasicChatTurn(trustedInput);
 		const existingJob = finalizationQueue.get(basicTurn.chatTurnId);
 		if (existingJob && existingJob.status !== 'failed') {
 			return { job: existingJob, displayTurn: toDisplayTurn(existingJob.result ?? basicTurn) };
@@ -156,9 +178,9 @@ export const finalizationJobService = {
 
 		const finalizedTurn = await findFinalizedTurn(basicTurn.chatTurnId);
 		const job = finalizedTurn
-			? finalizationQueue.recordCompleted(basicTurn.chatTurnId, chatTurnCdo, finalizedTurn)
-			: finalizationQueue.enqueue(basicTurn.chatTurnId, chatTurnCdo);
-		await persistFinalizationJob(job, chatTurnCdo);
+			? finalizationQueue.recordCompleted(basicTurn.chatTurnId, trustedInput, finalizedTurn)
+			: finalizationQueue.enqueue(basicTurn.chatTurnId, trustedInput);
+		await persistFinalizationJob(job, trustedInput);
 
 		return { job, displayTurn: toDisplayTurn(finalizedTurn ?? basicTurn) };
 	},

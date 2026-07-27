@@ -1,16 +1,65 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import type { RagEvidenceDto } from '@rag-advisor-demo/shared/domain';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+import { getEvidenceAnchorId, GroundedResponse } from './GroundedResponse.js';
 import {
 	buildDefaultFinanceReportRequest,
 	buildFinanceDomainProfile,
 	buildHealthcareDomainProfile,
 	countEvidenceKinds,
 	getSessionDomain,
+	getSessionDisplayTitle,
 	summarizeDomainProfile,
+	stripFinanceAnswerNotices,
 } from './workspaceConfig.js';
 import { parseReportMarkdown } from './reportMarkdownUtils.js';
 import { getWorkspaceCopy, getWorkspaceDomainConfig } from './workspaceI18n.js';
+
+const citationEvidence: RagEvidenceDto = {
+	domain: 'finance',
+	characterId: 'finance-assistant_demo',
+	sessionId: 'finance-session',
+	profileFieldsUsed: [],
+	items: [
+		{
+			sourceKind: 'character_lore',
+			sourceId: 'hanul-balanced-portfolio_demo-lore',
+			label: 'DEMO — 한울 균형 포트폴리오',
+			domain: 'finance',
+		},
+	],
+	excluded: [],
+	structuredFilterDecisions: [],
+	missingInformation: [],
+	assumptions: [],
+};
+
+test('grounded responses preserve sections and resolve source IDs into labeled citation buttons', () => {
+	const markup = renderToStaticMarkup(
+		createElement(GroundedResponse, {
+			text: '*한눈에 보기\n\n- 원금 손실 가능성이 있습니다. [hanul-balanced-portfolio_demo-lore]*',
+			evidence: citationEvidence,
+			citationLabel: '근거',
+		})
+	);
+
+	assert.match(markup, /한눈에 보기/);
+	assert.match(markup, /advisor-response-spacer/);
+	assert.match(markup, /advisor-response-bullet/);
+	assert.match(markup, /근거 · DEMO — 한울 균형 포트폴리오/);
+	assert.doesNotMatch(markup, /\*한눈에 보기/);
+});
+
+test('grounded responses generate stable evidence anchors for citation navigation', () => {
+	assert.equal(
+		getEvidenceAnchorId('hanul-balanced-portfolio_demo-lore'),
+		'advisor-source-hanul-balanced-portfolio_demo-lore'
+	);
+});
 
 test('finance profile builder preserves the strict discriminator and omits missing suitability fields', () => {
 	assert.deepEqual(
@@ -133,8 +182,31 @@ test('workspace copy provides distinct persisted language variants', () => {
 	assert.equal(getWorkspaceDomainConfig('finance', 'eng').shortTitle, 'Finance');
 	assert.equal(getWorkspaceDomainConfig('finance', 'kor').suggestedPrompts.length, 5);
 	assert.equal(getWorkspaceDomainConfig('finance', 'eng').suggestedPrompts.length, 5);
-	assert.match(getWorkspaceDomainConfig('finance', 'kor').suggestedPrompts[1]!, /6개월/);
-	assert.match(getWorkspaceDomainConfig('finance', 'eng').suggestedPrompts[3]!, /balanced/i);
+	assert.match(getWorkspaceDomainConfig('finance', 'kor').suggestedPrompts[0]!, /매달 50만 원/);
+	assert.match(getWorkspaceDomainConfig('finance', 'kor').suggestedPrompts[4]!, /보호/);
+	assert.match(getWorkspaceDomainConfig('finance', 'eng').suggestedPrompts[1]!, /three years/i);
+	assert.equal(
+		getSessionDisplayTitle('Finance product exploration', 'finance', 'kor'),
+		'금융 상품 알아보기'
+	);
+	assert.equal(
+		getSessionDisplayTitle('Finance product exploration', 'finance', 'eng'),
+		'Finance guide'
+	);
+	assert.equal(getSessionDisplayTitle('My custom plan', 'finance', 'kor'), 'My custom plan');
+});
+
+test('finance chat rendering removes repeated demo notices while preserving the answer', () => {
+	assert.equal(
+		stripFinanceAnswerNotices(
+			'비교 결과입니다.\n\n상품과 시나리오는 가상 데모 데이터이며, 이는 금융 또는 법률 자문이 아닙니다.\n\n다음 조건을 확인하세요.'
+		),
+		'비교 결과입니다.\n\n다음 조건을 확인하세요.'
+	);
+	assert.equal(
+		stripFinanceAnswerNotices('원금 손실 가능성이 있는 가상 상품입니다.'),
+		'원금 손실 가능성이 있는 가상 상품입니다.'
+	);
 });
 
 test('workspace helpers localize profile, evidence, and report request copy', () => {

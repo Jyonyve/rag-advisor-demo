@@ -16,7 +16,11 @@ import {
 import { createBasicChatTurn, buildTempChatTurnId } from '@rag-advisor-demo/shared/util';
 import { chatStore } from '../store/chatStore.js';
 import { tempStore } from '../store/tempStore.js';
-import { parseEntriesToConversation, buildChatMessage } from '../util/chatParseUtils.js';
+import {
+	parseEntriesToConversation,
+	buildChatMessage,
+	buildChatMessageFromEntries,
+} from '../util/chatParseUtils.js';
 import { detectLanguage } from '../util/languageUtils.js';
 import { sanitizeLlmResponse } from '../util/llmUtils.js';
 import {
@@ -39,6 +43,8 @@ export interface ReceiveBotResponseOptions {
 
 export const FINANCE_DEMO_NOTICE =
 	'Demo notice: Products and scenarios are fictional demo data. Attributed public regulatory sources may be real. This is educational information, not financial advice or legal advice.';
+export const FINANCE_DEMO_NOTICE_KO =
+	'안내: 상품과 조건은 모두 가상인 교육용 예시이며, 금융·법률 자문이 아닙니다. 실제 상품을 선택하기 전에는 공식 상품 설명을 확인해 주세요.';
 export const HEALTHCARE_OPERATIONS_DEMO_NOTICE =
 	'Demo notice: This facility, workflow, and scenario are fictional demo data. This is administrative guidance, not medical advice.';
 
@@ -46,8 +52,12 @@ export const ensureDomainDemoDisclaimer = (
 	response: string,
 	character: Pick<CharacterInfo, 'domain'>
 ): string => {
-	if (character.domain === 'finance' && !/not financial advice/i.test(response)) {
-		return `${response.trim()}\n\n${FINANCE_DEMO_NOTICE}`;
+	if (
+		character.domain === 'finance' &&
+		!/(?:not financial advice|금융(?:\s*(?:·|또는)\s*법률)?\s*자문이\s*아닙니다)/i.test(response)
+	) {
+		const notice = /[가-힣]/.test(response) ? FINANCE_DEMO_NOTICE_KO : FINANCE_DEMO_NOTICE;
+		return `${response.trim()}\n\n${notice}`;
 	}
 	if (character.domain === 'healthcare_operations' && !/not medical advice/i.test(response)) {
 		return `${response.trim()}\n\n${HEALTHCARE_OPERATIONS_DEMO_NOTICE}`;
@@ -320,9 +330,11 @@ async function _generateAndAppendResponse(
 	);
 	options.logger?.checkpoint('personaGeneration.complete', { emotion: personaResponse.emotion });
 
-	const botChatEntries = sanitizeLlmResponse(
-		ensureDomainDemoDisclaimer(personaResponse.response, characterInfo)
-	);
+	const finalResponseText = ensureDomainDemoDisclaimer(personaResponse.response, characterInfo);
+	const botChatEntries =
+		characterInfo.domain === 'finance'
+			? [{ type: 'dialogue' as const, prompt: finalResponseText.replace(/\r\n|\r/g, '\n').trim() }]
+			: sanitizeLlmResponse(finalResponseText);
 	// 3. Create the new bot response message.
 	const request = buildChatMessage(
 		'user',
@@ -331,11 +343,11 @@ async function _generateAndAppendResponse(
 		userConversation,
 		tempTurn.sessionId
 	);
-	const response = buildChatMessage(
+	const response = buildChatMessageFromEntries(
 		'assistant',
 		tempTurn.sequence,
 		characterInfo.showName,
-		parseEntriesToConversation(botChatEntries),
+		botChatEntries,
 		tempTurn.sessionId,
 		personaResponse.emotion,
 		aiModelInfo.model

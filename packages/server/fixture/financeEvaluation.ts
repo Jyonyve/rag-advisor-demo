@@ -27,7 +27,7 @@ export const FINANCE_EVALUATION_CASES: readonly FinanceEvaluationCase[] = [
 			riskPreference: 'conservative',
 			constraints: [],
 		},
-		currentMessage: 'Compare eligible fictional demo products.',
+		currentMessage: '수익률보다 안정성을 우선하면 어떤 상품이 맞나요?',
 		expectedEligibleProductFixtureIds: ['cedar-reserve-account'],
 	},
 	{
@@ -39,7 +39,7 @@ export const FINANCE_EVALUATION_CASES: readonly FinanceEvaluationCase[] = [
 			riskPreference: 'moderate',
 			constraints: [],
 		},
-		currentMessage: 'Compare eligible fictional demo products.',
+		currentMessage: '3년 정도 모을 생각인데 예금과 펀드 중 뭐가 나을까요?',
 		expectedEligibleProductFixtureIds: [
 			'cedar-reserve-account',
 			'saebom-six-month-deposit',
@@ -58,7 +58,7 @@ export const FINANCE_EVALUATION_CASES: readonly FinanceEvaluationCase[] = [
 			riskPreference: 'growth',
 			constraints: [],
 		},
-		currentMessage: 'Compare eligible fictional demo products.',
+		currentMessage: '장기적으로 자산을 늘리고 싶은데 포트폴리오를 구성해 주세요.',
 		expectedEligibleProductFixtureIds: [
 			'cedar-reserve-account',
 			'saebom-six-month-deposit',
@@ -78,8 +78,44 @@ export const FINANCE_EVALUATION_CASES: readonly FinanceEvaluationCase[] = [
 			riskPreference: 'growth',
 			constraints: [],
 		},
-		currentMessage: 'Assume I need the money in 6 months for this answer only.',
+		currentMessage:
+			'제 투자성향은 그대로 두고, 이번에는 6개월짜리 단기 자금이라고 가정해 주세요. 이건 프로필에 저장하지 마세요.',
 		expectedEligibleProductFixtureIds: ['cedar-reserve-account', 'saebom-six-month-deposit'],
+	},
+	{
+		id: 'temporary-one-year-moving-cost',
+		profile: {
+			domain: 'finance',
+			investmentHorizonMonths: 60,
+			liquidityNeed: 'low',
+			riskPreference: 'growth',
+			constraints: [],
+		},
+		currentMessage:
+			'만약 이 돈을 1년 뒤 이사 비용으로 써야 한다면 뭘 추천할래요? 이 조건은 저장하지 마세요.',
+		expectedEligibleProductFixtureIds: [
+			'cedar-reserve-account',
+			'saebom-six-month-deposit',
+			'daeon-one-year-savings',
+		],
+	},
+	{
+		id: 'temporary-principal-loss-avoidance',
+		profile: {
+			domain: 'finance',
+			investmentHorizonMonths: 60,
+			liquidityNeed: 'low',
+			riskPreference: 'growth',
+			constraints: [],
+		},
+		currentMessage: '평소에는 공격적으로 투자하지만, 이번 돈만큼은 원금 손실을 피하고 싶어요.',
+		expectedEligibleProductFixtureIds: [
+			'cedar-reserve-account',
+			'saebom-six-month-deposit',
+			'daeon-one-year-savings',
+			'harbor-income-note',
+			'ongyeol-short-bond-portfolio',
+		],
 	},
 ] as const;
 
