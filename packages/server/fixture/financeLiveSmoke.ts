@@ -237,7 +237,7 @@ const evaluateReportSmoke = (
 			hasExpectedIdentity && report?.origin === 'generated' && report.status === 'draft',
 		ragDisabledByDefault:
 			hasExpectedIdentity && report?.retrievalEnabled === false && report.includeInRag === false,
-		hasFinancePromptVersion: hasExpectedIdentity && report?.promptVersion === 'finance-report-v1',
+		hasFinancePromptVersion: hasExpectedIdentity && report?.promptVersion === 'finance-report-v6',
 		hasLoreSources: hasExpectedIdentity && Boolean(report?.sourceRefs.loreIds.length),
 		hasDemoDisclaimer:
 			hasExpectedIdentity &&
@@ -342,6 +342,8 @@ export const buildFinanceLiveSmokePlan = (
 	const chatPending = !snapshot.tempTurn;
 	const reportPending = snapshot.reports.length === 0;
 	const retrievalRuns = Number(chatPending) + Number(reportPending);
+	const maximumQueryEmbeddingCalls = Number(chatPending) * 8 + Number(reportPending);
+	const retrievalTransformationLlmCalls = Number(chatPending) * 2;
 	return {
 		mode: 'dry-run',
 		modelName,
@@ -373,11 +375,12 @@ export const buildFinanceLiveSmokePlan = (
 		},
 		plannedProviderCalls: {
 			retrievalRuns,
-			maximumQueryEmbeddingCalls: retrievalRuns * 8,
-			retrievalTransformationLlmCalls: retrievalRuns * 2,
+			maximumQueryEmbeddingCalls,
+			retrievalTransformationLlmCalls,
 			chatGenerationLlmCalls: { minimum: chatPending ? 1 : 0, maximum: chatPending ? 2 : 0 },
 			reportGenerationLlmCalls: reportPending ? 1 : 0,
-			maximumLlmCalls: retrievalRuns * 2 + (chatPending ? 2 : 0) + (reportPending ? 1 : 0),
+			maximumLlmCalls:
+				retrievalTransformationLlmCalls + (chatPending ? 2 : 0) + (reportPending ? 1 : 0),
 		},
 		validationFailures,
 	};

@@ -16,7 +16,7 @@ import {
 	type RagMissingInformation,
 	type RagStructuredFilterDecision,
 } from '@rag-advisor-demo/shared/domain';
-import { parseSessionId } from '@rag-advisor-demo/shared/util';
+import { parseSessionId, serializeChatEntries } from '@rag-advisor-demo/shared/util';
 
 import {
 	parseDomainProfileForCharacter,
@@ -167,6 +167,11 @@ const buildEvidenceItems = (
 		sourceId: turn.chatTurnId,
 		label: `Chat memory ${turn.sequence}`,
 		domain,
+		chatMemory: {
+			sequence: turn.sequence,
+			requestText: serializeChatEntries(turn.request?.entries ?? [], 'asterisk-actions'),
+			responseText: serializeChatEntries(turn.response?.entries ?? [], 'asterisk-actions'),
+		},
 	})),
 	...lores.map((lore) => ({
 		sourceKind: 'character_lore' as const,

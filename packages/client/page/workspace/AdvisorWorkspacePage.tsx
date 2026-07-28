@@ -19,13 +19,13 @@ import { DEFAULT_CHAT_MODEL } from '@rag-advisor-demo/shared/config';
 import type {
 	AssistantDomain,
 	ChatTurnCdo,
+	DisplayTurn,
 	ProfileInfo,
 	RagEvidenceDto,
 	RagEvidenceItem,
 	SessionInfo,
 	TempChatTurn,
 } from '@rag-advisor-demo/shared/domain';
-import { createBasicChatTurn } from '@rag-advisor-demo/shared/util';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { EmailPasswordPreBuiltUI } from 'supertokens-auth-react/recipe/emailpassword/prebuiltui.js';
@@ -38,7 +38,6 @@ import {
 	useOrchestrationApi,
 	useProfileApi,
 	useSessionApi,
-	useTempChatApi,
 } from '../../hook/api/index.js';
 import { useChatState } from '../../hook/state/useChatState.js';
 import { useAuth } from '../../provider/AuthProvider.jsx';
@@ -443,7 +442,12 @@ const EvidenceSourceDetail = ({
 					<strong>{item.label}</strong>
 				</div>
 				<Tooltip title={text.closeSource}>
-					<IconButton size="small" onClick={onClose} aria-label={text.closeSource}>
+					<IconButton
+						className="advisor-icon-close"
+						size="small"
+						onClick={onClose}
+						aria-label={text.closeSource}
+					>
 						<CloseRounded />
 					</IconButton>
 				</Tooltip>
@@ -480,7 +484,21 @@ const EvidenceSourceDetail = ({
 					</>
 				)}
 			</dl>
-			{item.sourceKind === 'chat_memory' ? (
+			{item.sourceKind === 'chat_memory' && item.chatMemory ? (
+				<section className="advisor-source-detail__body">
+					<h4>{text.memoryBody}</h4>
+					<div className="advisor-source-detail__memory">
+						<div>
+							<strong>{text.memoryQuestion}</strong>
+							<p>{item.chatMemory.requestText || text.sourceUnavailable}</p>
+						</div>
+						<div>
+							<strong>{text.memoryAnswer}</strong>
+							<p>{item.chatMemory.responseText || text.sourceUnavailable}</p>
+						</div>
+					</div>
+				</section>
+			) : item.sourceKind === 'chat_memory' ? (
 				<p className="advisor-source-detail__status">{text.memorySourceHint}</p>
 			) : isLoading ? (
 				<p className="advisor-source-detail__status">{text.loadingSource}</p>
@@ -521,6 +539,7 @@ const EvidenceSourceDetail = ({
 const EvidenceInspector = ({
 	profile,
 	evidence,
+	chatTurns,
 	domain,
 	focusSourceId,
 	focusSourceVersion,
@@ -530,6 +549,7 @@ const EvidenceInspector = ({
 }: {
 	profile?: ProfileInfo;
 	evidence?: RagEvidenceDto;
+	chatTurns: readonly DisplayTurn[];
 	domain: AssistantDomain;
 	focusSourceId?: string;
 	focusSourceVersion: number;
@@ -544,6 +564,21 @@ const EvidenceInspector = ({
 	const evidenceKinds = countEvidenceKinds(evidence, lang);
 	const [selectedSourceId, setSelectedSourceId] = useState<string>();
 	const selectedSource = evidence?.items.find(({ sourceId }) => sourceId === selectedSourceId);
+	const selectedMemoryTurn =
+		selectedSource?.sourceKind === 'chat_memory'
+			? chatTurns.find(({ chatTurnId }) => chatTurnId === selectedSource.sourceId)
+			: undefined;
+	const selectedSourceDetail =
+		selectedSource?.sourceKind === 'chat_memory' && selectedMemoryTurn
+			? {
+					...selectedSource,
+					chatMemory: {
+						sequence: selectedMemoryTurn.sequence,
+						requestText: parseEntriesToText(selectedMemoryTurn.request.entries),
+						responseText: parseEntriesToText(selectedMemoryTurn.response.entries),
+					},
+				}
+			: selectedSource;
 	const loreQuery = useLoreApi().getLore(
 		selectedSource?.sourceKind === 'character_lore' ? selectedSource.sourceId : ''
 	);
@@ -595,7 +630,7 @@ const EvidenceInspector = ({
 					</span>
 					<Tooltip title={text.closeEvidence}>
 						<IconButton
-							className="advisor-inspector__mobile-close"
+							className="advisor-inspector__mobile-close advisor-icon-close"
 							size="small"
 							onClick={onMobileClose}
 							aria-label={text.closeEvidence}
@@ -707,12 +742,12 @@ const EvidenceInspector = ({
 				maxWidth="md"
 			>
 				<DialogContent>
-					{selectedSource && (
+					{selectedSourceDetail && (
 						<EvidenceSourceDetail
-							item={selectedSource}
+							item={selectedSourceDetail}
 							content={sourceContent}
 							metadata={
-								selectedSource.sourceKind === 'character_lore'
+								selectedSourceDetail.sourceKind === 'character_lore'
 									? loreQuery.data?.loreInfo?.structuredMetadata
 									: undefined
 							}
@@ -739,19 +774,11 @@ const ConversationWorkspace = ({
 	const domain = getSessionDomain(session) ?? profile.domainProfile?.domain ?? 'finance';
 	const config = getWorkspaceDomainConfig(domain, lang);
 	const { userId } = useAuth();
-	const {
-		chatTurns,
-		tempChatTurn: stateTempTurn,
-		isLoadingHistory,
-		addChatTurn,
-		changeTempChatTurn,
-		getNextSequence,
-	} = useChatState(session.sessionId);
-	const { getTempChatTurn } = useTempChatApi();
+	const { chatTurns, isLoadingHistory, addChatTurn, getNextSequence } = useChatState(
+		session.sessionId
+	);
 	const { receiveBotResponse, enqueueFinalization, waitForFinalizationJob } = useOrchestrationApi();
 	const { updateSessionOnNewMessage } = useSessionApi();
-	const nextPersistedSequence = isLoadingHistory ? -1 : getNextSequence();
-	const { data: tempResponse } = getTempChatTurn(session.sessionId, nextPersistedSequence);
 	const [input, setInput] = useState('');
 	const [pendingQuestion, setPendingQuestion] = useState('');
 	const [streamingText, setStreamingText] = useState('');
@@ -767,10 +794,6 @@ const ConversationWorkspace = ({
 	const [inspectedQuestion, setInspectedQuestion] = useState<string>();
 	const [inspectorMobileOpen, setInspectorMobileOpen] = useState(false);
 
-	useEffect(() => {
-		if (tempResponse?.tempChatTurn) changeTempChatTurn(tempResponse.tempChatTurn);
-	}, [changeTempChatTurn, tempResponse]);
-
 	useEffect(
 		() => () => {
 			abortRef.current?.abort();
@@ -780,7 +803,8 @@ const ConversationWorkspace = ({
 
 	const finalizeTurn = async (turn: TempChatTurn) => {
 		if (!userId || !turn.chatTurnSets[0]) return;
-		const selected = turn.chatTurnSets[turn.fixedSetNo >= 0 ? turn.fixedSetNo : 0];
+		const selected =
+			turn.fixedSetNo >= 0 ? turn.chatTurnSets[turn.fixedSetNo] : turn.chatTurnSets.at(-1);
 		if (!selected) return;
 		const cdo: ChatTurnCdo = {
 			userId,
@@ -789,16 +813,12 @@ const ConversationWorkspace = ({
 			request: selected.request,
 			response: selected.response,
 		};
-		await addChatTurn(createBasicChatTurn(cdo));
-		try {
-			const { displayTurn, job } = await enqueueFinalization.mutateAsync({ cdo });
-			await addChatTurn(displayTurn);
-			if (job.status !== 'completed') {
-				await addChatTurn(await waitForFinalizationJob(turn.sessionId, turn.sequence));
-			}
-		} catch (cause) {
-			console.error('Conversation finalization failed:', cause);
-		}
+		const { displayTurn, job } = await enqueueFinalization.mutateAsync({ cdo });
+		const finalizedTurn =
+			job.status === 'completed'
+				? displayTurn
+				: await waitForFinalizationJob(turn.sessionId, turn.sequence);
+		await addChatTurn(finalizedTurn);
 	};
 
 	const sendMessage = async (prompt = input) => {
@@ -813,8 +833,7 @@ const ConversationWorkspace = ({
 		abortRef.current?.abort();
 		const controller = new AbortController();
 		abortRef.current = controller;
-		const currentTemp = stateTempTurn;
-		const sequence = currentTemp ? currentTemp.sequence + 1 : getNextSequence();
+		const sequence = getNextSequence();
 		try {
 			const result = await receiveBotResponse.mutateAsync({
 				request: {
@@ -827,8 +846,7 @@ const ConversationWorkspace = ({
 				onStatus: setStage,
 				signal: controller.signal,
 			});
-			if (currentTemp) void finalizeTurn(currentTemp);
-			changeTempChatTurn(result);
+			await finalizeTurn(result);
 			void updateSessionOnNewMessage({
 				sessionId: session.sessionId,
 				latestCharMessage: JSON.stringify({
@@ -850,24 +868,12 @@ const ConversationWorkspace = ({
 		}
 	};
 
-	const displayTurns = [
-		...chatTurns.map((turn) => ({
-			key: `fixed-${turn.sequence}`,
-			request: turn.request,
-			response: turn.response,
-			evidence: turn.ragEvidence,
-		})),
-		...(stateTempTurn?.chatTurnSets[0]
-			? [
-					{
-						key: `temp-${stateTempTurn.sequence}`,
-						request: stateTempTurn.chatTurnSets[0].request,
-						response: stateTempTurn.chatTurnSets[0].response,
-						evidence: stateTempTurn.ragEvidence,
-					},
-				]
-			: []),
-	];
+	const displayTurns = chatTurns.map((turn) => ({
+		key: `fixed-${turn.sequence}`,
+		request: turn.request,
+		response: turn.response,
+		evidence: turn.ragEvidence,
+	}));
 	const latestTurn = displayTurns[displayTurns.length - 1];
 	const latestEvidence = latestTurn?.evidence;
 	const latestQuestion = latestTurn ? parseEntriesToText(latestTurn.request.entries) : undefined;
@@ -1109,6 +1115,7 @@ const ConversationWorkspace = ({
 				<EvidenceInspector
 					profile={profile}
 					evidence={inspectedEvidence ?? latestEvidence}
+					chatTurns={chatTurns}
 					domain={domain}
 					focusSourceId={inspectedSourceId}
 					focusSourceVersion={inspectedSourceVersion}
@@ -1230,6 +1237,7 @@ export function AdvisorWorkspacePage() {
 				>
 					<Tooltip title={text.closeSignIn}>
 						<IconButton
+							className="advisor-icon-close"
 							onClick={closeLoginModal}
 							aria-label={text.closeSignIn}
 							sx={{ position: 'absolute', right: 10, top: 10, zIndex: 2 }}

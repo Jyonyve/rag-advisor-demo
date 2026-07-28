@@ -96,11 +96,20 @@ test('resolves finance context without altering the current message and exposes 
 		character: FINANCE_CHARACTER,
 		profile: profile(sessionId, {
 			domain: 'finance',
-			investmentGoal: 'Fictional medium-term savings goal',
+			investmentGoal: 'Medium-term savings goal',
 			constraints: [],
 		}),
 		memories: memories({
-			longTermHistory: [chatMemory(sessionId, 'finance-memory_demo-chat')],
+			longTermHistory: [
+				chatMemory(sessionId, 'finance-memory_demo-chat', {
+					request: {
+						entries: [{ type: 'dialogue', prompt: 'What did I say about liquidity?' }],
+					} as ChatTurn['request'],
+					response: {
+						entries: [{ type: 'dialogue', prompt: 'You said access to funds matters.' }],
+					} as ChatTurn['response'],
+				}),
+			],
 			relevantLore: [
 				{ ...DEMO_LORE_FIXTURES[0], userId: USER_ID },
 				{ ...FINANCE_REGULATORY_FIXTURES[0], userId: USER_ID },
@@ -121,6 +130,14 @@ test('resolves finance context without altering the current message and exposes 
 			.filter(({ sourceKind }) => sourceKind === 'session_document')
 			.map(({ origin }) => origin),
 		['manual', 'generated']
+	);
+	assert.deepEqual(
+		resolved.evidence.items.find(({ sourceKind }) => sourceKind === 'chat_memory')?.chatMemory,
+		{
+			sequence: 1,
+			requestText: 'What did I say about liquidity?',
+			responseText: 'You said access to funds matters.',
+		}
 	);
 	const publicEvidence = resolved.evidence.items.find(({ publicSource }) => publicSource);
 	assert.equal(publicEvidence?.publicSource?.sourceId, 'KR-FCPA-20260102');

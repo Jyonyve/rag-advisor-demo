@@ -86,6 +86,37 @@ test('BackgroundJobQueue emits lifecycle snapshots to onChange', async () => {
 	assert.deepEqual(changes, ['queued:0:value', 'running:1:value', 'completed:1:value']);
 });
 
+test('BackgroundJobQueue persists the queued snapshot before worker lifecycle updates', async () => {
+	let releaseQueuedPersistence!: () => void;
+	const queuedPersistence = new Promise<void>((resolve) => {
+		releaseQueuedPersistence = resolve;
+	});
+	let workerStarted = false;
+	const changes: string[] = [];
+	const queue = new BackgroundJobQueue<string, string>({
+		worker: async (input) => {
+			workerStarted = true;
+			return input.toUpperCase();
+		},
+		retryDelayMs: 1,
+		onChange: async (snapshot) => {
+			changes.push(snapshot.status);
+			if (snapshot.status === 'queued') await queuedPersistence;
+		},
+	});
+
+	queue.enqueue('persist-before-run', 'value');
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	assert.equal(workerStarted, false);
+	assert.deepEqual(changes, ['queued']);
+
+	releaseQueuedPersistence();
+	const completed = await waitForTerminalStatus(queue, 'persist-before-run');
+	assert.equal(completed.status, 'completed');
+	assert.equal(workerStarted, true);
+	assert.deepEqual(changes, ['queued', 'running', 'completed']);
+});
+
 test('BackgroundJobQueue isolates onChange failures from worker execution', async () => {
 	let executions = 0;
 	const observedErrors: string[] = [];

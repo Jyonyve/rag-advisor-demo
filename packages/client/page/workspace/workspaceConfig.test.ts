@@ -16,7 +16,11 @@ import {
 	summarizeDomainProfile,
 	stripFinanceAnswerNotices,
 } from './workspaceConfig.js';
-import { parseReportMarkdown } from './reportMarkdownUtils.js';
+import {
+	omitDuplicateLeadingReportTitle,
+	parseReportMarkdown,
+	splitReportLoreCitations,
+} from './reportMarkdownUtils.js';
 import { getWorkspaceCopy, getWorkspaceDomainConfig } from './workspaceI18n.js';
 
 const citationEvidence: RagEvidenceDto = {
@@ -155,7 +159,7 @@ test('finance report request includes the canonical structured profile values', 
 			riskPreference: 'moderate',
 			constraints: [],
 		}),
-		'Compare the eligible fictional finance products for this session profile with a moderate-risk preference, a 36-month horizon, a medium liquidity need. Explain material risks and cite the supporting evidence.'
+		'Compare up to three suitable products for this session profile with a moderate-risk preference, a 36-month horizon, a medium liquidity need. Explain benefits, access to funds, principal-loss risk, and deposit protection with citations, then recommend the best-supported option.'
 	);
 });
 
@@ -174,9 +178,44 @@ test('report Markdown parser exposes headings, notices, lists, and paragraphs as
 	);
 });
 
+test('report reader omits only a leading title already shown by the document header', () => {
+	const blocks = parseReportMarkdown('# Recommendation result\n\n## Summary\n\nKeep this section.');
+	assert.deepEqual(omitDuplicateLeadingReportTitle(blocks, 'Recommendation result'), [
+		{ type: 'heading', level: 2, text: 'Summary' },
+		{ type: 'paragraph', text: 'Keep this section.' },
+	]);
+	assert.deepEqual(omitDuplicateLeadingReportTitle(blocks, 'Different title'), blocks);
+});
+
+test('report citations distinguish clickable Lore IDs from ordinary bracketed text', () => {
+	assert.deepEqual(
+		splitReportLoreCitations(
+			'근거 [cedar-reserve-account_demo-lore] 및 [ordinary-note]를 확인하세요.'
+		),
+		[
+			{ type: 'text', text: '근거 ' },
+			{ type: 'lore_citation', sourceId: 'cedar-reserve-account_demo-lore' },
+			{ type: 'text', text: ' 및 [ordinary-note]를 확인하세요.' },
+		]
+	);
+});
+
+test('report citations split multiple Lore IDs from one legacy bracket group', () => {
+	assert.deepEqual(
+		splitReportLoreCitations(
+			'[kr-depositor-protection-act-20260102_demo-lore, kr-deposit-limit-policy-20250901_demo-lore]'
+		),
+		[
+			{ type: 'lore_citation', sourceId: 'kr-depositor-protection-act-20260102_demo-lore' },
+			{ type: 'text', text: ', ' },
+			{ type: 'lore_citation', sourceId: 'kr-deposit-limit-policy-20250901_demo-lore' },
+		]
+	);
+});
+
 test('workspace copy provides distinct persisted language variants', () => {
-	assert.equal(getWorkspaceCopy('kor').report, '금융 보고서');
-	assert.equal(getWorkspaceCopy('eng').report, 'Finance report');
+	assert.equal(getWorkspaceCopy('kor').report, '상품 추천 리포트');
+	assert.equal(getWorkspaceCopy('eng').report, 'Product recommendation report');
 	assert.notEqual(getWorkspaceCopy('kor').references, getWorkspaceCopy('eng').references);
 	assert.equal(getWorkspaceDomainConfig('finance', 'kor').shortTitle, '금융');
 	assert.equal(getWorkspaceDomainConfig('finance', 'eng').shortTitle, 'Finance');
@@ -236,5 +275,5 @@ test('workspace helpers localize profile, evidence, and report request copy', ()
 		)[0]?.label,
 		'공식 도메인 지식'
 	);
-	assert.match(buildDefaultFinanceReportRequest(undefined, 'kor'), /가상 금융 상품/);
+	assert.match(buildDefaultFinanceReportRequest(undefined, 'kor'), /상품을 최대 3개 비교/);
 });

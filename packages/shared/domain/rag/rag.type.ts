@@ -37,6 +37,7 @@ export interface RagEvidenceItem {
 	domain: AssistantDomain;
 	origin?: DocumentOrigin;
 	publicSource?: PublicSourceAttribution;
+	chatMemory?: { sequence: number; requestText: string; responseText: string };
 	relevanceScore?: number;
 }
 

@@ -126,6 +126,11 @@ const finalizationQueue = new BackgroundJobQueue<ChatTurnCdo, ChatTurn>({
 		}
 
 		await chatStore.storeChatTurn(enrichedTurn);
+		await tempStore.deleteTempChatTurn(
+			chatTurnCdo.sessionId,
+			chatTurnCdo.sequence,
+			chatTurnCdo.userId
+		);
 		enrichedTurnCache.delete(chatTurnId);
 		return enrichedTurn;
 	},
@@ -180,7 +185,6 @@ export const finalizationJobService = {
 		const job = finalizedTurn
 			? finalizationQueue.recordCompleted(basicTurn.chatTurnId, trustedInput, finalizedTurn)
 			: finalizationQueue.enqueue(basicTurn.chatTurnId, trustedInput);
-		await persistFinalizationJob(job, trustedInput);
 
 		return { job, displayTurn: toDisplayTurn(finalizedTurn ?? basicTurn) };
 	},

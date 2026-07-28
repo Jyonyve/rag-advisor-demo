@@ -22,3 +22,10 @@ test('retrieval query expansion is deterministic and can be bounded by callers',
 	]);
 	assert.equal(MAX_RETRIEVAL_QUERY_TEXTS, 8);
 });
+
+test('direct retrieval preserves one multilingual query without LLM expansion', () => {
+	assert.deepEqual(ragQueryService.createDirectQuery('1년 뒤 이사비로 사용할 자금'), {
+		queryTexts: ['1년 뒤 이사비로 사용할 자금'],
+		termAliases: [],
+	});
+});

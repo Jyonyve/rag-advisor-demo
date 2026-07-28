@@ -16,7 +16,7 @@ import { DEMO_CHARACTER_FIXTURES } from '../fixture/domainFixtures.js';
 import { FINANCE_CATALOG_FIXTURES } from '../fixture/financeFixtures.js';
 import { FINANCE_REGULATORY_FIXTURES } from '../fixture/financeRegulatoryFixtures.js';
 import { HEALTHCARE_OPERATIONS_FIXTURES } from '../fixture/healthcareOperationsFixtures.js';
-import { buildPersonaMessages } from './personaEngine.js';
+import { buildPersonaMessages, normalizeFinanceResponseCitations } from './personaEngine.js';
 
 const character = DEMO_CHARACTER_FIXTURES[0].character;
 const sessionId = buildSessionId(character.characterId);
@@ -92,13 +92,14 @@ test('finance persona messages contain canonical eligible evidence and finance s
 	const prompt = messages.map(({ content }) => String(content)).join('\n');
 
 	assert.match(prompt, /not financial advice/i);
-	assert.match(prompt, /application footer already displays this notice/i);
-	assert.match(prompt, /do not repeat the general fictional-demo/i);
+	assert.match(prompt, /application footer already identifies the catalog and profile/i);
+	assert.match(prompt, /Never use the words "fictional", "demo", "가상", or "데모"/i);
 	assert.match(prompt, /Canonical session profile/);
 	assert.match(prompt, new RegExp(cedar.loreId));
 	assert.match(prompt, /Canonical body:/);
 	assert.match(prompt, /DEMO DATA ONLY/);
 	assert.match(prompt, /cite stable source IDs/i);
+	assert.match(prompt, /do not cite publicSource\.sourceId/i);
 	assert.match(prompt, /attributed Korean public regulatory evidence/i);
 	assert.match(prompt, /KR-FCPA-20260102/);
 	assert.match(prompt, /law\.go\.kr/);
@@ -111,8 +112,36 @@ test('finance persona messages contain canonical eligible evidence and finance s
 	assert.match(prompt, /어떤 정보가 궁금하신가요/);
 	assert.match(prompt, /minimum investment amounts/i);
 	assert.match(prompt, /retrieval similarity scores/i);
+	assert.match(prompt, /stated age as broad life-stage context/i);
+	assert.match(prompt, /money needed soon/i);
+	assert.match(prompt, /eligible registered catalog products/i);
+	assert.match(prompt, /choose one supported product/i);
+	assert.match(prompt, /Do not ask the user to provide candidate product names/i);
+	assert.match(prompt, /등록된 상품 중에서는 \[상품명\]이 가장 적합합니다/);
 	assert.doesNotMatch(prompt, /third-person limited narrator/i);
 	assert.equal(messages.at(-1)?.role, 'user');
+});
+
+test('finance responses convert attributed public IDs to clickable Lore citations', () => {
+	const regulation = { ...FINANCE_REGULATORY_FIXTURES[0], userId: profile.userId };
+	const memories: MemoryResponse = {
+		langCode: 'kor',
+		shortTermHistory: [],
+		longTermHistory: [],
+		relevantLore: [regulation],
+		relevantHistory: [],
+		relevantDocuments: [],
+	};
+	const publicSourceId =
+		regulation.structuredMetadata?.domain === 'finance'
+			? regulation.structuredMetadata.publicSource?.sourceId
+			: undefined;
+	assert.ok(publicSourceId);
+
+	assert.equal(
+		normalizeFinanceResponseCitations(`공식 안내를 확인하세요. [${publicSourceId}]`, memories),
+		`공식 안내를 확인하세요. [${regulation.loreId}]`
+	);
 });
 
 test('healthcare operations persona messages contain canonical workflow evidence and safety rules', () => {

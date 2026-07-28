@@ -138,10 +138,10 @@ export const buildDefaultFinanceReportRequest = (
 	lang: LangCode = 'eng'
 ): string => {
 	if (lang === 'kor') {
-		return '이 세션 프로필에 적합한 가상 금융 상품을 비교해 주세요. 중요한 위험을 설명하고 근거를 인용해 주세요.';
+		return '현재 제 프로필에 맞는 상품을 최대 3개 비교해 주세요. 장점, 돈을 꺼내기 쉬운 정도, 원금 손실 위험과 예금자보호 여부를 근거와 함께 설명하고, 가장 적합한 상품 하나를 추천해 주세요.';
 	}
 	if (profile?.domain !== 'finance') {
-		return 'Compare the eligible fictional finance products for this session profile. Explain material risks and cite the supporting evidence.';
+		return 'Compare up to three suitable products for this session profile. Explain benefits, access to funds, principal-loss risk, and deposit protection with citations, then recommend the best-supported option.';
 	}
 
 	const details = [
@@ -150,7 +150,7 @@ export const buildDefaultFinanceReportRequest = (
 		profile.liquidityNeed && `${profile.liquidityNeed} liquidity need`,
 	].filter(Boolean);
 	const profileSummary = details.length ? ` with a ${details.join(', a ')}` : '';
-	return `Compare the eligible fictional finance products for this session profile${profileSummary}. Explain material risks and cite the supporting evidence.`;
+	return `Compare up to three suitable products for this session profile${profileSummary}. Explain benefits, access to funds, principal-loss risk, and deposit protection with citations, then recommend the best-supported option.`;
 };
 
 const splitConstraints = (value: string): string[] =>

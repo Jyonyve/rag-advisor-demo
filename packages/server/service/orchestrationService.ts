@@ -15,6 +15,7 @@ import {
 } from '@rag-advisor-demo/shared/domain';
 import { createBasicChatTurn, buildTempChatTurnId } from '@rag-advisor-demo/shared/util';
 import { chatStore } from '../store/chatStore.js';
+import { loreStore } from '../store/loreStore.js';
 import { tempStore } from '../store/tempStore.js';
 import {
 	parseEntriesToConversation,
@@ -30,6 +31,10 @@ import {
 	serializeError,
 } from '../util/jsonlLogger.js';
 import { handleServiceError } from '../util/serviceHelpers.js';
+import {
+	hasFinanceRecommendationIntent,
+	mergeFinanceRecommendationLore,
+} from './financeProductFilter.js';
 import { memoryEngine } from './memoryEngine.js';
 import { personaEngine } from './personaEngine.js';
 import { resolveRagContext } from './ragContextService.js';
@@ -169,6 +174,7 @@ export const finalizeChatTurn = async (chatTurnCdo: ChatTurnCdo): Promise<ChatTu
 	try {
 		const enrichedChatTurn = await enrichChatTurn(chatTurnCdo);
 		await chatStore.storeChatTurn(enrichedChatTurn);
+		await tempStore.deleteTempChatTurn(sessionId, sequence, chatTurnCdo.userId);
 
 		logger.complete();
 		return enrichedChatTurn;
@@ -300,6 +306,20 @@ async function _generateAndAppendResponse(
 		} else {
 			throw error;
 		}
+	}
+	if (characterInfo.domain === 'finance' && hasFinanceRecommendationIntent(userConversation)) {
+		const characterLore = await loreStore.getLoresByCharacter(
+			characterInfo.characterId,
+			tempTurn.userId
+		);
+		recalledMemories = {
+			...recalledMemories,
+			relevantLore: mergeFinanceRecommendationLore(
+				recalledMemories.relevantLore,
+				characterLore.loreInfos,
+				userConversation
+			),
+		};
 	}
 
 	const resolvedRagContext = resolveRagContext({

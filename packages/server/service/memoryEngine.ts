@@ -38,6 +38,7 @@ export interface MemoryRecallContext {
 	characterShowName: string;
 	turnId: string;
 	sequence: number;
+	queryStrategy?: 'transformed' | 'direct';
 }
 
 export const memoryEngine = {
@@ -72,19 +73,23 @@ export const memoryEngine = {
 		});
 
 		try {
-			const transformedQuery = await ragQueryService.transformQuery(
-				userConversation,
-				sessionId,
-				userId,
-				userShowName,
-				characterShowName
-			);
+			const transformedQuery =
+				context?.queryStrategy === 'direct'
+					? ragQueryService.createDirectQuery(userConversation)
+					: await ragQueryService.transformQuery(
+							userConversation,
+							sessionId,
+							userId,
+							userShowName,
+							characterShowName
+						);
 			flowLogger.info('memoryEngine', 'queryTransformed', {
 				sessionId,
 				userId,
 				characterId,
 				queryCount: transformedQuery.queryTexts.length,
 				hasCriticalTerm: Boolean(transformedQuery.criticalTerm),
+				queryStrategy: context?.queryStrategy ?? 'transformed',
 			});
 			traceRagEvent(ragTraceContext, 'query.transformed', {
 				queryTexts: transformedQuery.queryTexts,

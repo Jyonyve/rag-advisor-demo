@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { ApiError } from '@rag-advisor-demo/shared/domain';
 import { createQueryEmbeddingCache, resolveQueryEmbedding } from './embeddingService.js';
 
 test('query embedding cache shares concurrent work for identical text', async () => {
@@ -49,4 +50,22 @@ test('failed query embeddings are evicted so a request can retry', async () => {
 	await assert.rejects(() => resolveQueryEmbedding('retry', cache, embedder));
 	assert.deepEqual(await resolveQueryEmbedding('retry', cache, embedder), [1]);
 	assert.equal(callCount, 2);
+});
+
+test('query embedding preserves provider quota failures as HTTP 429 errors', async () => {
+	const cache = createQueryEmbeddingCache();
+	const providerError = Object.assign(new Error('provider quota exceeded'), { status: 429 });
+
+	await assert.rejects(
+		() =>
+			resolveQueryEmbedding('quota failure', cache, async () => {
+				throw providerError;
+			}),
+		(error: unknown) => {
+			assert.ok(error instanceof ApiError);
+			assert.equal(error.status, 429);
+			assert.match(error.clientMessage ?? '', /usage limit was reached/i);
+			return true;
+		}
+	);
 });

@@ -86,5 +86,21 @@ export const tempStore = {
 		}
 	},
 
+	deleteTempChatTurn: async (sessionId: string, sequence: number, userId: string): Promise<void> => {
+		try {
+			await getDatabase()
+				.delete(tempChatTurns)
+				.where(
+					and(
+						eq(tempChatTurns.sessionId, sessionId),
+						eq(tempChatTurns.sequence, sequence),
+						eq(tempChatTurns.userId, userId)
+					)
+				);
+		} catch (error) {
+			handleServiceError(error, 'Failed to delete a finalized temporary chat turn.');
+		}
+	},
+
 	clearTempChatCollectionCache: (): void => {},
 };

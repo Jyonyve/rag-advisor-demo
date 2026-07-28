@@ -20,6 +20,14 @@ export const MAX_RETRIEVAL_QUERY_TEXTS = 8;
 
 export const ragQueryService = {
 	/**
+	 * Uses the original multilingual query directly when a caller already has an
+	 * authoritative domain filter and does not need LLM-based query expansion.
+	 */
+	createDirectQuery(userInput: string): TransformedQuery {
+		return { queryTexts: [userInput], termAliases: [] };
+	},
+
+	/**
 	 * Transforms a raw user query into an all-English set of search terms and structured
 	 * filter criteria for the RAG system.
 	 */

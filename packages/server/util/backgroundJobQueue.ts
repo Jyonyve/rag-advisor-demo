@@ -61,8 +61,7 @@ export class BackgroundJobQueue<TInput, TResult> {
 		this.jobs.set(jobId, job);
 		this.pendingJobIds.push(jobId);
 		this.trimRetainedJobs();
-		void this.notifyChange(job);
-		this.scheduleProcessing();
+		void this.notifyChange(job).finally(() => this.scheduleProcessing());
 		return this.toSnapshot(job);
 	}
 

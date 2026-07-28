@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import OpenAI from 'openai';
 import { and, asc, cosineDistance, desc, eq, inArray, notInArray, or, sql } from 'drizzle-orm';
 import { Metadata } from '@rag-advisor-demo/shared/api';
+import { ApiError } from '@rag-advisor-demo/shared/domain';
 import { getEmbeddingEnv } from '../config/env.js';
 import { getDatabase } from '../db/postgresClient.js';
 import { memoryEmbeddings } from '../db/schema.js';
@@ -55,14 +56,34 @@ const getOpenAI = () => {
 	return openai;
 };
 
+const normalizeEmbeddingProviderError = (error: unknown): Error => {
+	if (error instanceof ApiError) return error;
+
+	const providerError = error as { status?: unknown; statusCode?: unknown } | null;
+	const status = providerError?.status ?? providerError?.statusCode;
+	if (status === 429) {
+		return new ApiError(
+			429,
+			'Embedding provider request limit or quota was exceeded.',
+			'AI search is temporarily unavailable because its usage limit was reached. Please try again after the API quota is restored.'
+		);
+	}
+
+	return error instanceof Error ? error : new Error(String(error));
+};
+
 const embed = async (input: string): Promise<number[]> => {
-	const response = await getOpenAI().embeddings.create({
-		model: EMBEDDING_MODEL,
-		input,
-		dimensions: EMBEDDING_DIMENSIONS,
-		encoding_format: 'float',
-	});
-	return response.data[0].embedding;
+	try {
+		const response = await getOpenAI().embeddings.create({
+			model: EMBEDDING_MODEL,
+			input,
+			dimensions: EMBEDDING_DIMENSIONS,
+			encoding_format: 'float',
+		});
+		return response.data[0].embedding;
+	} catch (error) {
+		throw normalizeEmbeddingProviderError(error);
+	}
 };
 
 export const createQueryEmbeddingCache = (): QueryEmbeddingCache => new Map();
@@ -77,7 +98,7 @@ export const resolveQueryEmbedding = (
 
 	const pending = embedder(queryText).catch((error) => {
 		if (cache.get(queryText) === pending) cache.delete(queryText);
-		throw error;
+		throw normalizeEmbeddingProviderError(error);
 	});
 	cache.set(queryText, pending);
 	return pending;

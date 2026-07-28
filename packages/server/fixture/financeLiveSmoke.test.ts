@@ -53,8 +53,9 @@ test('finance live smoke defaults to a no-write, no-provider plan', () => {
 		tempChatTurnDisclaimerUpdate: false,
 		generatedReportInsert: true,
 	});
-	assert.equal(plan.plannedProviderCalls.maximumQueryEmbeddingCalls, 16);
-	assert.equal(plan.plannedProviderCalls.maximumLlmCalls, 7);
+	assert.equal(plan.plannedProviderCalls.maximumQueryEmbeddingCalls, 9);
+	assert.equal(plan.plannedProviderCalls.retrievalTransformationLlmCalls, 2);
+	assert.equal(plan.plannedProviderCalls.maximumLlmCalls, 5);
 	assert.deepEqual(plan.validationFailures, []);
 });
 

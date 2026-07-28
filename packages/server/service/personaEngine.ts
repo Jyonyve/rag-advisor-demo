@@ -31,6 +31,22 @@ type PersonaGenerationOptions = {
 	onGroundingDecision?: (decision: PersonaGroundingDecision) => void;
 };
 
+export const normalizeFinanceResponseCitations = (
+	response: string,
+	recalledMemories: MemoryResponse
+): string => {
+	let normalized = response;
+	for (const lore of recalledMemories.relevantLore) {
+		const publicSourceId =
+			lore.structuredMetadata?.domain === 'finance'
+				? lore.structuredMetadata.publicSource?.sourceId
+				: undefined;
+		if (!publicSourceId) continue;
+		normalized = normalized.replaceAll(`[${publicSourceId}]`, `[${lore.loreId}]`);
+	}
+	return normalized;
+};
+
 export const personaEngine = {
 	/**
 	 * Generates a character's conversational response using a rich, recalled memory context.
@@ -152,6 +168,12 @@ export const personaEngine = {
 					groundingDecision: response.groundingDecision,
 					responseLength: response.response.length,
 				});
+			}
+			if (characterInfo.domain === 'finance') {
+				response = {
+					...response,
+					response: normalizeFinanceResponseCitations(response.response, recalledMemories),
+				};
 			}
 			flowLogger.info('personaEngine', 'generateResponse.complete', {
 				...logContext,

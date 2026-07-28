@@ -5,7 +5,12 @@ import type { FinancialSessionProfile, LoreInfo } from '@rag-advisor-demo/shared
 
 import { DEMO_LORE_FIXTURES } from '../fixture/domainFixtures.js';
 import { FINANCE_CATALOG_FIXTURES } from '../fixture/financeFixtures.js';
-import { analyzeFinanceRequestOverrides, filterFinanceLore } from './financeProductFilter.js';
+import {
+	analyzeFinanceRequestOverrides,
+	filterFinanceLore,
+	hasFinanceRecommendationIntent,
+	mergeFinanceRecommendationLore,
+} from './financeProductFilter.js';
 
 const financeLores = [
 	DEMO_LORE_FIXTURES[0],
@@ -19,6 +24,31 @@ const conservativeProfile: FinancialSessionProfile = {
 	riskPreference: 'conservative',
 	constraints: [],
 };
+
+test('finance recommendation intent recognizes natural best-product questions', () => {
+	assert.equal(hasFinanceRecommendationIntent('그러면 저는 어디에 넣는 게 가장 좋을까요?'), true);
+	assert.equal(hasFinanceRecommendationIntent('그러면 어디 가입하면 될까요?'), true);
+	assert.equal(hasFinanceRecommendationIntent('Which product is best for me?'), true);
+	assert.equal(hasFinanceRecommendationIntent('이 돈은 1년 뒤 이사비로 쓸 예정입니다.'), false);
+});
+
+test('recommendation retrieval supplements only registered product and disclosure Lore', () => {
+	const retrieved = [DEMO_LORE_FIXTURES[0]] as LoreInfo[];
+	const merged = mergeFinanceRecommendationLore(
+		retrieved,
+		financeLores,
+		'그러면 저는 어디에 넣는 게 가장 좋을까요?'
+	);
+
+	assert.equal(merged[0]?.loreId, retrieved[0]?.loreId);
+	assert.equal(merged.length, 1 + FINANCE_CATALOG_FIXTURES.length);
+	assert.ok(merged.some(({ loreId }) => loreId === 'cedar-reserve-account_demo-lore'));
+	assert.ok(merged.some(({ loreId }) => loreId === 'cedar-reserve-account-disclosure_demo-lore'));
+	assert.deepEqual(
+		mergeFinanceRecommendationLore(retrieved, financeLores, '예금자보호를 설명해 주세요.'),
+		retrieved
+	);
+});
 
 test('finance filtering retains compatible products and their disclosures', () => {
 	const result = filterFinanceLore(financeLores, conservativeProfile, 'Compare the demo products.');

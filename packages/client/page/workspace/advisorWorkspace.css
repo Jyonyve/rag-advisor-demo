@@ -922,6 +922,8 @@ textarea {
 	font-size: clamp(1.65rem, 2.5vw, 2.35rem);
 	font-weight: 400;
 	letter-spacing: -0.035em;
+	overflow-wrap: normal;
+	word-break: keep-all;
 }
 
 .advisor-demo-badge {
@@ -1600,6 +1602,27 @@ textarea {
 
 .advisor-source-detail {
 	padding: 4px;
+	color: #292a24 !important;
+}
+
+.advisor-icon-close.MuiIconButton-root {
+	width: 44px;
+	height: 44px;
+	border: 0 !important;
+	border-radius: 50%;
+	background: transparent !important;
+	box-shadow: none !important;
+	color: #24251f !important;
+}
+
+.advisor-icon-close.MuiIconButton-root:hover,
+.advisor-icon-close.MuiIconButton-root:focus-visible {
+	background: rgba(36, 37, 31, 0.08) !important;
+}
+
+.advisor-icon-close.MuiIconButton-root svg {
+	color: #24251f !important;
+	font-size: 26px;
 }
 
 .advisor-source-detail__header {
@@ -1625,6 +1648,7 @@ textarea {
 }
 
 .advisor-source-detail__header strong {
+	color: #20211c !important;
 	font-size: 0.7rem;
 	line-height: 1.45;
 }
@@ -1658,6 +1682,7 @@ textarea {
 
 .advisor-source-detail__metadata dd {
 	overflow-wrap: anywhere;
+	color: #292a24 !important;
 }
 
 .advisor-source-detail__content {
@@ -1665,6 +1690,7 @@ textarea {
 	padding: 12px;
 	overflow-y: auto;
 	border-radius: 8px;
+	color: #292a24 !important;
 	font-size: 0.65rem;
 	line-height: 1.7;
 	white-space: pre-wrap;
@@ -1678,13 +1704,39 @@ textarea {
 	font-weight: 760;
 }
 
+.advisor-source-detail__memory {
+	display: grid;
+	gap: 10px;
+}
+
+.advisor-source-detail__memory > div {
+	padding: 12px;
+	border-radius: 8px;
+	background: #faf9f4;
+}
+
+.advisor-source-detail__memory strong {
+	display: block;
+	margin-bottom: 6px;
+	color: #55574f;
+	font-size: 0.6rem;
+}
+
+.advisor-source-detail__memory p {
+	margin: 0;
+	color: #292a24;
+	font-size: 0.67rem;
+	line-height: 1.7;
+	white-space: pre-wrap;
+}
+
 .advisor-source-detail__raw-metadata {
 	margin-top: 12px;
 	padding: 10px 12px;
 	border: 1px solid #dedfd7;
 	border-radius: 8px;
 	background: #faf9f4;
-	color: #292a24;
+	color: #292a24 !important;
 }
 
 .advisor-source-detail__raw-metadata summary {
@@ -1696,7 +1748,7 @@ textarea {
 .advisor-source-detail__raw-metadata pre {
 	margin: 10px 0 0;
 	overflow-x: auto;
-	color: #292a24;
+	color: #292a24 !important;
 	font-size: 0.58rem;
 	line-height: 1.6;
 	white-space: pre-wrap;
@@ -1835,6 +1887,122 @@ textarea {
 	color: var(--advisor-ink);
 }
 
+.advisor-report-examples {
+	display: grid;
+	min-width: 0;
+	gap: 9px;
+}
+
+.advisor-report-examples > strong {
+	color: #55574f;
+	font-size: 0.66rem;
+}
+
+.advisor-report-examples > div {
+	display: grid;
+	min-width: 0;
+	gap: 7px;
+}
+
+.advisor-report-examples button {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	padding: 10px 12px;
+	border: 1px solid #d8d9d1;
+	border-radius: 9px;
+	background: #f9f8f3;
+	color: #33352f;
+	font-size: 0.65rem;
+	line-height: 1.55;
+	overflow-wrap: anywhere;
+	text-align: left;
+	white-space: normal;
+	cursor: pointer;
+}
+
+.advisor-report-examples button:hover,
+.advisor-report-examples button:focus-visible {
+	border-color: var(--advisor-accent);
+	background: var(--advisor-soft-accent);
+	outline: none;
+}
+
+.advisor-report-progress__track {
+	width: 100%;
+	height: 4px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: #dedfd7;
+}
+
+.advisor-report-progress__track span {
+	display: block;
+	width: 42%;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--advisor-accent, #c47b00);
+	animation: advisorReportProgress 1.35s ease-in-out infinite;
+}
+
+.advisor-report-blocking-progress {
+	position: fixed;
+	z-index: 2000;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	background: rgba(23, 24, 20, 0.66);
+	backdrop-filter: blur(7px);
+}
+
+.advisor-report-blocking-progress__card {
+	display: grid;
+	width: min(420px, 100%);
+	gap: 12px;
+	padding: 28px;
+	border: 1px solid rgba(255, 255, 255, 0.5);
+	border-radius: 18px;
+	background: var(--advisor-paper, #fbfaf5);
+	box-shadow: 0 30px 100px rgba(0, 0, 0, 0.32);
+	color: var(--advisor-ink, #171814);
+	text-align: center;
+}
+
+.advisor-report-blocking-progress__icon {
+	display: grid;
+	width: 44px;
+	height: 44px;
+	margin: 0 auto 2px;
+	place-items: center;
+	border-radius: 50%;
+	background: #171814;
+	color: #fff;
+}
+
+.advisor-report-blocking-progress__icon svg {
+	font-size: 21px;
+}
+
+.advisor-report-blocking-progress__card strong {
+	font-size: 0.94rem;
+}
+
+.advisor-report-blocking-progress__card > span:not(.advisor-report-blocking-progress__icon) {
+	color: var(--advisor-muted, #6f7168);
+	font-size: 0.72rem;
+	line-height: 1.65;
+}
+
+@keyframes advisorReportProgress {
+	0% {
+		transform: translateX(-110%);
+	}
+	100% {
+		transform: translateX(350%);
+	}
+}
+
 .advisor-tools-tabs button.is-active {
 	border-color: #d5d6ce;
 	background: #fff;
@@ -1859,6 +2027,7 @@ textarea {
 .advisor-tools-dialog__body {
 	min-height: 0;
 	padding: 28px;
+	overflow-x: hidden;
 	overflow-y: auto;
 	background:
 		linear-gradient(rgba(23, 24, 20, 0.02) 1px, transparent 1px),
@@ -1870,6 +2039,7 @@ textarea {
 
 .advisor-tool-panel {
 	width: min(720px, 100%);
+	min-width: 0;
 	margin: 0 auto;
 }
 
@@ -1920,7 +2090,10 @@ textarea {
 
 .advisor-reference-create textarea,
 .advisor-report-panel textarea {
+	box-sizing: border-box;
 	width: 100%;
+	min-width: 0;
+	max-width: 100%;
 	padding: 12px 13px;
 	resize: vertical;
 	border: 1px solid #d7d8d0;
@@ -1974,6 +2147,7 @@ textarea {
 }
 
 .advisor-document-list article {
+	min-width: 0;
 	padding: 16px 18px;
 	border: 1px solid var(--advisor-line);
 	border-radius: 12px;
@@ -2008,6 +2182,7 @@ textarea {
 }
 
 .advisor-document-list article > p {
+	max-width: 100%;
 	margin: 10px 0 14px;
 	overflow: hidden;
 	color: var(--advisor-muted);
@@ -2115,6 +2290,15 @@ textarea {
 	letter-spacing: -0.03em;
 }
 
+.advisor-document-reader__content:lang(ko) .advisor-document-reader__header h2,
+.advisor-document-reader__content:lang(ko) .advisor-report-markdown h1,
+.advisor-document-reader__content:lang(ko) .advisor-report-markdown h2,
+.advisor-document-reader__content:lang(ko) .advisor-report-markdown h3 {
+	font-family: 'Y Universe', 'Cafe24ClassicType', 'Batang', serif;
+	letter-spacing: -0.045em;
+	word-break: keep-all;
+}
+
 .advisor-document-reader__body {
 	padding: 30px clamp(24px, 6vw, 72px) 44px;
 	overflow-y: auto;
@@ -2180,6 +2364,26 @@ textarea {
 	margin-top: 6px;
 }
 
+.advisor-report-citation {
+	display: inline;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #745313;
+	font: inherit;
+	font-weight: 720;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+	overflow-wrap: anywhere;
+}
+
+.advisor-report-citation:hover,
+.advisor-report-citation:focus-visible {
+	color: #a46100;
+	outline: none;
+}
+
 .advisor-document-reader__footer {
 	display: flex;
 	align-items: center;
@@ -2203,6 +2407,7 @@ textarea {
 
 .advisor-report-panel {
 	display: grid;
+	min-width: 0;
 	gap: 22px;
 }
 
@@ -2335,6 +2540,7 @@ textarea {
 	.advisor-mobile-header {
 		display: flex;
 		height: 58px;
+		flex: none;
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 18px;
@@ -2373,7 +2579,10 @@ textarea {
 	}
 
 	.advisor-main-shell {
+		display: flex;
 		height: 100dvh;
+		flex-direction: column;
+		overflow: hidden;
 	}
 
 	.advisor-start {
@@ -2383,10 +2592,12 @@ textarea {
 
 	.advisor-conversation-layout {
 		display: block;
+		min-height: 0;
+		flex: 1;
 	}
 
 	.advisor-conversation {
-		height: calc(100dvh - 58px);
+		height: 100%;
 	}
 
 	.advisor-inspector {
@@ -2409,9 +2620,9 @@ textarea {
 		height: 44px;
 		align-items: center;
 		justify-content: center;
-		border: 1px solid #d1d2ca;
-		border-radius: 10px;
-		background: #fff;
+		border: 0;
+		border-radius: 50%;
+		background: transparent;
 		color: #24251f;
 	}
 
@@ -2697,6 +2908,14 @@ textarea {
 		margin-bottom: 9px;
 		color: #4f514a;
 		font-size: 0.72rem;
+	}
+
+	.advisor-source-detail__memory strong {
+		font-size: 0.72rem;
+	}
+
+	.advisor-source-detail__memory p {
+		font-size: 0.8rem;
 	}
 
 	.advisor-source-detail__status,
