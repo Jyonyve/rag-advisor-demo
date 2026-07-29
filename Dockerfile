@@ -20,9 +20,6 @@ RUN pnpm config set node-linker hoisted \
 # Stage 3: Build the application
 FROM deps AS builder
 
-# Copy static public assets used by the Vite client build.
-COPY public ./public
-
 # Copy package sources after dependency installation. Build output and dependencies remain excluded
 # by .dockerignore, while new source directories cannot silently fall out of the production build.
 COPY packages/shared ./packages/shared
@@ -75,7 +72,6 @@ RUN pnpm config set node-linker hoisted \
 
 # Copy built artifacts from builder stage
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/client/dist ./packages/client/dist
 COPY --from=builder /app/packages/server/dist ./packages/server/dist
