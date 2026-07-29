@@ -45,10 +45,11 @@ keys or database credentials.
 
 ## Public deployment
 
-The simplest free deployment uses one Koyeb Web Service built from the repository Dockerfile, with
-Neon for PostgreSQL/pgvector and hosted SuperTokens for authentication. See
-[`docs/koyeb-deployment.md`](docs/koyeb-deployment.md) for the exact configuration and verification
-checklist.
+The simplest free demo deployment uses one Render Web Service built from the repository
+Dockerfile, with Neon for PostgreSQL/pgvector and hosted SuperTokens for authentication. See
+[`docs/render-deployment.md`](docs/render-deployment.md) for the exact configuration and
+verification checklist. Render's free service sleeps when idle, so the first request after an idle
+period can take about a minute.
 
 ## Demonstrated workflow
 
