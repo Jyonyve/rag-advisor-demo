@@ -21,10 +21,10 @@ product evidence, and ground material claims in retrieved sources.
 
 ## Current status
 
-The generic application framework has been extracted into a new repository without the source
-repository's Git history, runtime assets, migration data, or private evaluation fixtures. The
-finance-domain contracts, fixture seed, retrieval evaluation, advisor prompt, and report UI are the
-next implementation milestones.
+The Finance workflow is implemented with deterministic fictional fixtures, fixed-turn preference
+memory, pgvector retrieval, suitability filtering, Korean and English UI copy, and grounded product
+recommendation reports. The repository contains no source-repository Git history, private runtime
+assets, private migration data, or private evaluation fixtures.
 
 ## Local development
 
@@ -43,7 +43,14 @@ pnpm dev
 Copy `.env.example` to your own untracked `.env` and fill in local values. Never commit provider
 keys or database credentials.
 
-## Planned demonstration
+## Public deployment
+
+The simplest free deployment uses one Koyeb Web Service built from the repository Dockerfile, with
+Neon for PostgreSQL/pgvector and hosted SuperTokens for authentication. See
+[`docs/koyeb-deployment.md`](docs/koyeb-deployment.md) for the exact configuration and verification
+checklist.
+
+## Demonstrated workflow
 
 1. Retrieve fictional products and attributed Korean public regulatory education from pgvector.
 2. Remember normalized investor preferences within an isolated session.

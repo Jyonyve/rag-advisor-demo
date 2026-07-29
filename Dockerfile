@@ -23,30 +23,11 @@ FROM deps AS builder
 # Copy static public assets used by the Vite client build.
 COPY public ./public
 
-# Copy source code for all production packages
-COPY packages/shared/api ./packages/shared/api
-COPY packages/shared/config ./packages/shared/config
-COPY packages/shared/domain ./packages/shared/domain
-COPY packages/shared/util ./packages/shared/util
-COPY packages/shared/index.ts packages/shared/tsconfig.json ./packages/shared/
-
-COPY packages/client/asset ./packages/client/asset
-COPY packages/client/hook ./packages/client/hook
-COPY packages/client/layout ./packages/client/layout
-COPY packages/client/page ./packages/client/page
-COPY packages/client/provider ./packages/client/provider
-COPY packages/client/style ./packages/client/style
-COPY packages/client/util ./packages/client/util
-COPY packages/client/App.tsx packages/client/AppProviders.tsx packages/client/entry-client.tsx packages/client/entry-server.tsx packages/client/index.html packages/client/index.ts packages/client/routeConstants.ts packages/client/tsconfig.json packages/client/vite.config.ts ./packages/client/
-
-COPY packages/server/config ./packages/server/config
-COPY packages/server/db ./packages/server/db
-COPY packages/server/eval ./packages/server/eval
-COPY packages/server/route ./packages/server/route
-COPY packages/server/service ./packages/server/service
-COPY packages/server/store ./packages/server/store
-COPY packages/server/util ./packages/server/util
-COPY packages/server/drizzle.config.ts packages/server/index.ts packages/server/root.ts packages/server/server.ts packages/server/tsconfig.json ./packages/server/
+# Copy package sources after dependency installation. Build output and dependencies remain excluded
+# by .dockerignore, while new source directories cannot silently fall out of the production build.
+COPY packages/shared ./packages/shared
+COPY packages/client ./packages/client
+COPY packages/server ./packages/server
 
 # Copy build config files
 COPY tsconfig.base.json tsconfig.json ./
@@ -99,7 +80,11 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/client/dist ./packages/client/dist
 COPY --from=builder /app/packages/server/dist ./packages/server/dist
 RUN mkdir -p node_modules/@rag-advisor-demo \
-    && ln -s ../../packages/shared node_modules/@rag-advisor-demo/shared
+    && ln -s ../../packages/shared node_modules/@rag-advisor-demo/shared \
+    && mkdir -p /app/logs /app/public/assets /tmp/rag-advisor-demo/assets \
+    && chown -R node:node /app/logs /app/public/assets /tmp/rag-advisor-demo
+
+USER node
 
 EXPOSE 3000
 
