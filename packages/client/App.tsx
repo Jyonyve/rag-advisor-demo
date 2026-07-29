@@ -27,12 +27,18 @@ export function App() {
 		setupApiClient(addToast);
 	}, [addToast]);
 
+	// SuperTokens does not render its children during SSR. Match that empty server output on the
+	// browser's first pass, then mount all routes after hydration has completed.
+	if (!hasMounted) {
+		return null;
+	}
+
 	return (
 		<Routes>
 			<Route index element={<AdvisorWorkspacePage />} />
 			<Route path="workspace" element={<AdvisorWorkspacePage />} />
 			<Route path="workspace/:sessionId" element={<AdvisorWorkspacePage />} />
-			{hasMounted && getSuperTokensRoutesForReactRouterDom(reactRouter, [EmailPasswordPreBuiltUI])}
+			{getSuperTokensRoutesForReactRouterDom(reactRouter, [EmailPasswordPreBuiltUI])}
 			<Route path="*" element={<WorkspaceFallbackRedirect />} />
 		</Routes>
 	);

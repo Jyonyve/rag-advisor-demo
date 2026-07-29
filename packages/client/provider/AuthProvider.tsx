@@ -38,10 +38,14 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 	// 1. Hooks and State
 	const session = useSessionContext();
 	const { getMe } = useUserApi();
+	const [hasMounted, setHasMounted] = useState(false);
 
 	// Session-derived state
-	const isSessionLoading = session.loading;
-	const isLoggedIn = !session.loading && session.doesSessionExist;
+	// SuperTokens cannot resolve the browser session while rendering on the server. Keep the
+	// server and the browser's first render on the same loading snapshot, then reveal the real
+	// session state after hydration.
+	const isSessionLoading = !hasMounted || session.loading;
+	const isLoggedIn = hasMounted && !session.loading && session.doesSessionExist;
 	const userId = isLoggedIn ? session.userId : undefined;
 	// 1. Add this at the top of your component (after getting session)
 	const currentRoles: string[] =
@@ -130,6 +134,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 	};
 
 	// 3. Effects
+	useEffect(() => {
+		setHasMounted(true);
+	}, []);
+
 	// Main effect to sync the user profile with the React Query data source
 	useEffect(() => {
 		// console.log('🔵 [Auth] Query data changed:', userQueryData);

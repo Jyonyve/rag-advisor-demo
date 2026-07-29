@@ -290,7 +290,7 @@ export const countEvidenceKinds = (
 	if (!evidence) return [];
 	const labels: Record<string, string> =
 		lang === 'kor'
-			? { character_lore: '공식 도메인 지식', session_document: '세션 문서', chat_memory: '대화 기억' }
+			? { character_lore: '공식 분야 지식', session_document: '세션 문서', chat_memory: '대화 기억' }
 			: {
 					character_lore: 'Official domain lore',
 					session_document: 'Session documents',

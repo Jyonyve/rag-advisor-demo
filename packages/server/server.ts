@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import compression from 'compression'; // Add compression middleware
 import type { ViteDevServer } from 'vite';
+import type { LangCode } from '@rag-advisor-demo/shared/config';
 
 import supertokens from 'supertokens-node';
 import Session from 'supertokens-node/recipe/session';
@@ -366,7 +367,7 @@ async function createServer() {
 			const detectedLang = res.locals.detectedLang || 'eng';
 
 			const finalHtml = template
-				.replace(`<!--app-html-->`, '<div id="root"></div>')
+				.replace(`<!--app-html-->`, '')
 				.replace(`<!--emotion-styles-->`, '')
 				.replace(`<!--server-data-->`, `<script>window.__INITIAL_LANG__="${detectedLang}"</script>`);
 
@@ -414,9 +415,9 @@ async function createServer() {
 		try {
 			let template: string;
 			// Type for the render function from entry-server (adjust if render signature changes)
-			let render: (url: string) => { html: string; emotionStyleTags: string };
+			let render: (url: string, initialLang: LangCode) => { html: string; emotionStyleTags: string };
 
-			const detectedLang = res.locals.detectedLang || 'eng';
+			const detectedLang: LangCode = res.locals.detectedLang === 'kor' ? 'kor' : 'eng';
 
 			if (!isProduction && vite) {
 				// DEVELOPMENT
@@ -434,7 +435,7 @@ async function createServer() {
 
 			// --- Render the React application ---
 			// Call the render function from entry-server (NO Helmet context needed now)
-			const { html: appHtml, emotionStyleTags } = render(req.originalUrl);
+			const { html: appHtml, emotionStyleTags } = render(req.originalUrl, detectedLang);
 
 			// 🎯 INJECT LANGUAGE DATA VIA HTML TEMPLATE
 			const finalHtml = template

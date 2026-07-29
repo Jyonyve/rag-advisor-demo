@@ -339,9 +339,26 @@ textarea {
 }
 
 .advisor-auth-dialog {
-	overflow: visible !important;
+	width: min(420px, calc(100vw - 32px)) !important;
+	overflow: hidden !important;
 	border-radius: 20px !important;
-	background: var(--advisor-paper) !important;
+	background: #fff !important;
+}
+
+.advisor-auth-dialog .MuiDialogContent-root {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 !important;
+	overflow: visible;
+}
+
+.advisor-auth-dialog .MuiDialogContent-root > * {
+	width: 100%;
+}
+
+.advisor-auth-dialog .advisor-icon-close {
+	color: #171814;
 }
 
 /* App shell */

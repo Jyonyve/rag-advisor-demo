@@ -216,6 +216,9 @@ test('report citations split multiple Lore IDs from one legacy bracket group', (
 test('workspace copy provides distinct persisted language variants', () => {
 	assert.equal(getWorkspaceCopy('kor').report, '상품 추천 리포트');
 	assert.equal(getWorkspaceCopy('eng').report, 'Product recommendation report');
+	assert.equal(getWorkspaceCopy('kor').openWorkspace, '탐색 시작하기');
+	assert.equal(getWorkspaceCopy('kor').domains, '분야');
+	assert.equal(getWorkspaceCopy('kor').workspaceTools, '탐색 도구');
 	assert.notEqual(getWorkspaceCopy('kor').references, getWorkspaceCopy('eng').references);
 	assert.equal(getWorkspaceDomainConfig('finance', 'kor').shortTitle, '금융');
 	assert.equal(getWorkspaceDomainConfig('finance', 'eng').shortTitle, 'Finance');
@@ -273,7 +276,7 @@ test('workspace helpers localize profile, evidence, and report request copy', ()
 			},
 			'kor'
 		)[0]?.label,
-		'공식 도메인 지식'
+		'공식 분야 지식'
 	);
 	assert.match(buildDefaultFinanceReportRequest(undefined, 'kor'), /상품을 최대 3개 비교/);
 });

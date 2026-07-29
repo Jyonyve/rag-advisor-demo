@@ -1,5 +1,5 @@
 import './style/index.css';
-import { APPNAME } from '@rag-advisor-demo/shared/config';
+import { APPNAME, DEFAULT_LANG, type LangCode } from '@rag-advisor-demo/shared/config';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import SuperTokens from 'supertokens-auth-react';
@@ -7,7 +7,7 @@ import EmailPassword from 'supertokens-auth-react/recipe/emailpassword/index.js'
 import Session from 'supertokens-auth-react/recipe/session/index.js';
 import { routeConstants } from './routeConstants.js';
 import { superTokenUiStyle } from './style/superTokensUi.js';
-import { createEmotionCache } from './util/index.js';
+import { createEmotionCache, setCurrentLang } from './util/index.js';
 import { AppProviders } from './AppProviders.js';
 import { App } from './App.js';
 
@@ -24,16 +24,16 @@ SuperTokens.init({
 	recipeList: [EmailPassword.init(), Session.init()],
 });
 
-const getServerDetectedLang = () => {
-	if (typeof window !== 'undefined' && (window as any).__INITIAL_LANG__) {
-		return (window as any).__INITIAL_LANG__;
-	}
-	return 'eng';
+const getServerDetectedLang = (): LangCode => {
+	const initialLang = (window as Window & { __INITIAL_LANG__?: unknown }).__INITIAL_LANG__;
+	return initialLang === 'kor' || initialLang === 'eng' ? initialLang : DEFAULT_LANG;
 };
+
+const initialLang = getServerDetectedLang();
+setCurrentLang(initialLang);
 
 function ClientApp() {
 	const clientSideEmotionCache = createEmotionCache();
-	const initialLang = getServerDetectedLang();
 	return (
 		<BrowserRouter basename={import.meta.env.BASE_URL}>
 			<AppProviders emotionCache={clientSideEmotionCache} initialLang={initialLang}>

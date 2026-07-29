@@ -115,7 +115,7 @@ const WorkspaceLogin = ({ onLogin }: { onLogin: () => void }) => {
 						<span>{text.noRealData}</span>
 					</div>
 				</div>
-				<div className="advisor-landing__preview" aria-label="Workspace preview">
+				<div className="advisor-landing__preview" aria-label={text.livePreview}>
 					<div className="advisor-preview__header">
 						<span>{text.livePreview}</span>
 						<span className="advisor-status-dot">Grounded</span>
