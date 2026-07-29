@@ -80,11 +80,8 @@ argument, repository file, or screenshot.
 | `DATABASE_URL`               | Yes                       | Use the dedicated Neon pooled connection URL.                                                     |
 | `SUPERTOKENS_CONNECTION_URI` | Yes                       | Hosted SuperTokens connection URI.                                                                |
 | `SUPERTOKENS_API_KEY`        | Yes                       | Hosted SuperTokens API key.                                                                       |
-| `OPENAI_API_KEY`             | Yes for current retrieval | Used for query embeddings and as the OpenAI fallback. Apply a strict provider budget.             |
+| `OPENAI_API_KEY`             | Yes for current retrieval | Server-only query and stored-content embeddings. It is never used as a fallback for user chat.    |
 | `SECRET_ENCRYPTION_KEY`      | Yes                       | New public-demo-only random secret of at least 32 bytes; do not reuse the private deployment key. |
-| `GEMINI_API_KEY`             | Optional                  | Server fallback only if intentionally enabled.                                                    |
-| `GROQ_API_KEY`               | Optional                  | Server fallback only if intentionally enabled.                                                    |
-| `OPENROUTER_API_KEY`         | Optional                  | Server fallback only if intentionally enabled.                                                    |
 
 ## First deployment checks
 

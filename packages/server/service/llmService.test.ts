@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { llmService } from './llmService.js';
 import { StructuredOutputValidationError } from '../util/structuredOutputUtils.js';
 import { flowLogger } from '../util/jsonlLogger.js';
+import { credentialStore } from '../store/credentialStore.js';
 
 test('buildTokenBudget reserves output tokens inside the context window', () => {
 	const aiModelInfo = getAiModelInfo('openai/gpt-5.6-terra');
@@ -52,6 +53,23 @@ test('selectable model registry contains current metadata and excludes retired m
 	}
 	assert.equal(SupportAiModelList.includes('anthropic/claude-3.7-sonnet'), false);
 	assert.equal(SupportAiModelList.includes('google/gemini-2.0-flash-001'), false);
+});
+
+test('direct OpenAI requires the user key and never falls back to the embedding key', async () => {
+	const originalGetDecryptedUserApiKeys = credentialStore.getDecryptedUserApiKeys;
+	credentialStore.getDecryptedUserApiKeys = async () => ({});
+
+	try {
+		await assert.rejects(
+			llmService.createLlmInstance(
+				{ platform: 'direct', provider: 'openai', model: 'gpt-4o-mini', maxTokens: 2_000 },
+				'test-user'
+			),
+			/OpenAI API key not found/
+		);
+	} finally {
+		credentialStore.getDecryptedUserApiKeys = originalGetDecryptedUserApiKeys;
+	}
 });
 
 test('invokeStructuredLlm returns a typed object from validated model output', async () => {

@@ -33,7 +33,7 @@ export function ApiKeyDialog({ open, userId, onClose }: ApiKeyDialogProps) {
 	const { addToast } = useToast();
 	const credentialApi = useCredentialApi();
 	const { data } = credentialApi.getUserApiKeyMetadata(userId);
-	const [keyType, setKeyType] = useState<ApiKeyType>('openrouterApiKey');
+	const [keyType, setKeyType] = useState<ApiKeyType>('openaiApiKey');
 	const [keyValue, setKeyValue] = useState('');
 	const [showKey, setShowKey] = useState(false);
 	const [saving, setSaving] = useState(false);
