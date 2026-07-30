@@ -519,7 +519,7 @@ const run = async (): Promise<void> => {
 		fixturePlan,
 		snapshot,
 		ownerId,
-		Boolean(process.env.OPENAI_API_KEY?.trim()),
+		Boolean(process.env.OPENAI_EMBEDDING_API_KEY?.trim()),
 		modelName
 	);
 	process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
@@ -537,7 +537,7 @@ const run = async (): Promise<void> => {
 		buildFinanceFixtureSeedPlan(verificationFixtureSnapshot, ownerId),
 		verificationSnapshot,
 		ownerId,
-		Boolean(process.env.OPENAI_API_KEY?.trim()),
+		Boolean(process.env.OPENAI_EMBEDDING_API_KEY?.trim()),
 		modelName
 	);
 	process.stdout.write(

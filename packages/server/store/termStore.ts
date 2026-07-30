@@ -4,6 +4,7 @@ import { METADATA_TYPES } from '@rag-advisor-demo/shared/config';
 import {
 	CharacterTermCdo,
 	CharacterTermInfo,
+	AiModelInfo,
 	SessionTermCdo,
 	SessionTermInfo,
 	TermType,
@@ -194,7 +195,8 @@ export const termStore = {
 	ensureAndGetTermsForPrompt: async (
 		sessionId: string,
 		userId: string,
-		koreanTermsToEnsure: string[]
+		koreanTermsToEnsure: string[],
+		modelInfo?: AiModelInfo
 	): Promise<Map<string, string>> => {
 		const { characterId } = parseSessionId(sessionId);
 		const [characterTerms, sessionTerms] = await Promise.all([
@@ -208,7 +210,7 @@ export const termStore = {
 				result.set(koreanTerm, existing.englishTerm);
 				continue;
 			}
-			const initialTerm = await llmService.translateProperNoun(koreanTerm, userId);
+			const initialTerm = await llmService.translateProperNoun(koreanTerm, userId, modelInfo);
 			if (!initialTerm?.trim()) continue;
 			await termStore.storeSessionTerm({ sessionId, koreanTerm, initialTerm });
 			result.set(koreanTerm, initialTerm);

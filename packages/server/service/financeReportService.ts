@@ -568,6 +568,7 @@ export const financeReportService = {
 			userId,
 			recentTurns,
 			detectLanguage(input.requestText),
+			aiModelInfo,
 			{
 				userShowName: profileResponse.profileInfo.showName,
 				characterShowName: character.showName,

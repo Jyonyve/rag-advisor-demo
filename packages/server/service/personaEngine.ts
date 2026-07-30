@@ -202,6 +202,7 @@ export const personaEngine = {
 					{
 						requiredSchema:
 							'{"groundingDecision": "not_applicable | supported | contradicted | uncertain", "response": "string", "emotion": "string"}',
+						repairModelInfo: aiModelInfo,
 						signal: options?.signal,
 					}
 				);

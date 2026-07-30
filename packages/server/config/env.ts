@@ -42,7 +42,8 @@ const serverEnvSchema = z.object({
 });
 
 const embeddingEnvSchema = z.object({
-	OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required for embeddings'),
+	OPENAI_EMBEDDING_API_KEY: z.string().min(1, 'OPENAI_EMBEDDING_API_KEY is required for embeddings'),
+	EMBEDDING_RATE_LIMIT_MAX_CALLS_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(60),
 });
 
 const databaseEnvSchema = z.object({
@@ -54,7 +55,9 @@ const databaseEnvSchema = z.object({
 const credentialEnvSchema = z.object({
 	SECRET_ENCRYPTION_KEY: z
 		.string()
-		.min(1, 'SECRET_ENCRYPTION_KEY is required for credential storage'),
+		.refine((value) => Buffer.byteLength(value, 'utf8') >= 32, {
+			message: 'SECRET_ENCRYPTION_KEY must be at least 32 bytes',
+		}),
 });
 
 const parseEnv = <T>(schema: z.ZodSchema<T>, env: NodeJS.ProcessEnv): T => {

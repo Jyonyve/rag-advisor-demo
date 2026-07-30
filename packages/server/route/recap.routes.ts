@@ -64,6 +64,7 @@ router.post(
 
 		const response = await recapStore.queryRecaps(
 			sessionId,
+			getSessionUserId(req),
 			queryTexts,
 			type,
 			filterCriteria,

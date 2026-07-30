@@ -7,6 +7,7 @@ import { getEmbeddingEnv } from '../config/env.js';
 import { getDatabase } from '../db/postgresClient.js';
 import { memoryEmbeddings } from '../db/schema.js';
 import { RagTraceContext, traceRagEvent } from '../util/ragTraceUtils.js';
+import { createEmbeddingRateLimiter } from './embeddingRateLimiter.js';
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const EMBEDDING_DIMENSIONS = 1536;
@@ -15,7 +16,7 @@ export type MemorySourceType = 'chat' | 'lore' | 'history' | 'recap' | 'document
 
 export interface MemorySearchScope {
 	sourceType: MemorySourceType | MemorySourceType[];
-	userId?: string;
+	userId: string;
 	characterId?: string;
 	sessionId?: string;
 	sourceIds?: string[];
@@ -50,10 +51,18 @@ export type QueryEmbeddingCache = Map<string, Promise<number[]>>;
 type QueryEmbedder = (input: string) => Promise<number[]>;
 
 let openai: OpenAI | undefined;
+let rateLimiter: ReturnType<typeof createEmbeddingRateLimiter> | undefined;
 
 const getOpenAI = () => {
-	openai ??= new OpenAI({ apiKey: getEmbeddingEnv().OPENAI_API_KEY });
+	openai ??= new OpenAI({ apiKey: getEmbeddingEnv().OPENAI_EMBEDDING_API_KEY });
 	return openai;
+};
+
+const getRateLimiter = () => {
+	rateLimiter ??= createEmbeddingRateLimiter({
+		maxCalls: getEmbeddingEnv().EMBEDDING_RATE_LIMIT_MAX_CALLS_PER_MINUTE,
+	});
+	return rateLimiter;
 };
 
 const normalizeEmbeddingProviderError = (error: unknown): Error => {
@@ -72,8 +81,9 @@ const normalizeEmbeddingProviderError = (error: unknown): Error => {
 	return error instanceof Error ? error : new Error(String(error));
 };
 
-const embed = async (input: string): Promise<number[]> => {
+const embed = async (input: string, userId: string): Promise<number[]> => {
 	try {
+		getRateLimiter().consume(userId);
 		const response = await getOpenAI().embeddings.create({
 			model: EMBEDDING_MODEL,
 			input,
@@ -91,7 +101,7 @@ export const createQueryEmbeddingCache = (): QueryEmbeddingCache => new Map();
 export const resolveQueryEmbedding = (
 	queryText: string,
 	cache: QueryEmbeddingCache,
-	embedder: QueryEmbedder = embed
+	embedder: QueryEmbedder
 ): Promise<number[]> => {
 	const cached = cache.get(queryText);
 	if (cached) return cached;
@@ -123,7 +133,7 @@ export const replaceMemoryEmbedding = async (input: ReplaceMemoryEmbeddingInput)
 		return;
 	}
 
-	const vector = await embed(input.content);
+	const vector = await embed(input.content, input.userId);
 	const now = new Date().toISOString();
 	await db.transaction(async (tx) => {
 		await tx
@@ -180,7 +190,9 @@ export const searchMemoryEmbeddings = async (
 
 	for (const [queryIndex, queryText] of queryTexts.entries()) {
 		const embeddingReused = queryEmbeddingCache.has(queryText);
-		const queryEmbedding = await resolveQueryEmbedding(queryText, queryEmbeddingCache);
+		const queryEmbedding = await resolveQueryEmbedding(queryText, queryEmbeddingCache, (text) =>
+			embed(text, scope.userId)
+		);
 		const distance = cosineDistance(memoryEmbeddings.embedding, queryEmbedding);
 		const sourceTypes = Array.isArray(scope.sourceType) ? scope.sourceType : [scope.sourceType];
 		const conditions = [
@@ -189,7 +201,7 @@ export const searchMemoryEmbeddings = async (
 				: inArray(memoryEmbeddings.sourceType, sourceTypes),
 			eq(memoryEmbeddings.active, true),
 		];
-		if (scope.userId) conditions.push(eq(memoryEmbeddings.userId, scope.userId));
+		conditions.push(eq(memoryEmbeddings.userId, scope.userId));
 		if (scope.characterId) conditions.push(eq(memoryEmbeddings.characterId, scope.characterId));
 		if (scope.sessionId) conditions.push(eq(memoryEmbeddings.sessionId, scope.sessionId));
 		if (scope.sourceIds?.length) conditions.push(inArray(memoryEmbeddings.sourceId, scope.sourceIds));

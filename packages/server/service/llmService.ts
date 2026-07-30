@@ -436,10 +436,13 @@ export const llmService = {
 	},
 
 	/**
-	 * Translates a proper noun using the default free chat model.
+	 * Translates a proper noun using the caller's selected model when available.
 	 */
-	translateProperNoun: async (koreanTerm: string, userId: string): Promise<string> => {
-		const aiModelInfo = DEFAULT_EXTRACTION_MODEL;
+	translateProperNoun: async (
+		koreanTerm: string,
+		userId: string,
+		aiModelInfo: AiModelInfo = DEFAULT_EXTRACTION_MODEL
+	): Promise<string> => {
 		const prompt = buildTermTranslationPrompt(koreanTerm);
 
 		// MODIFIED: 'invokeLlm'에 맞게 messages 배열을 생성하여 전달합니다.
@@ -457,10 +460,13 @@ export const llmService = {
 	},
 
 	/**
-	 * Extracts proper nouns from text using the default Google AI model.
+	 * Extracts proper nouns using the caller's selected model when available.
 	 */
-	extractProperNouns: async (textToAnalyze: string, userId: string): Promise<string[]> => {
-		const aiModelInfo = DEFAULT_EXTRACTION_MODEL;
+	extractProperNouns: async (
+		textToAnalyze: string,
+		userId: string,
+		aiModelInfo: AiModelInfo = DEFAULT_EXTRACTION_MODEL
+	): Promise<string[]> => {
 		const prompt = buildNerPrompt(textToAnalyze);
 		const nerSchema = createNerSchema();
 
@@ -483,12 +489,13 @@ export const llmService = {
 
 	extractGlossaryTerms: async (
 		textToAnalyze: string,
-		userId: string
+		userId: string,
+		aiModelInfo: AiModelInfo = DEFAULT_EXTRACTION_MODEL
 	): Promise<Array<{ koreanTerm: string; englishTerm: string }>> => {
 		const prompt = buildGlossaryExtractionPrompt(textToAnalyze);
 		const response = await llmService.invokeStructuredLlm(
 			[{ role: 'user', content: prompt }],
-			DEFAULT_EXTRACTION_MODEL,
+			aiModelInfo,
 			userId,
 			createGlossaryExtractionSchema()
 		);

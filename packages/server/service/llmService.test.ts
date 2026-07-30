@@ -195,20 +195,24 @@ test('streamStructuredLlm returns a typed object while preserving raw delta call
 test('repairStructuredLlmOutput delegates malformed output repair through structured invocation', async () => {
 	const originalInvokeStructuredLlm = llmService.invokeStructuredLlm;
 	let capturedPrompt = '';
-	llmService.invokeStructuredLlm = (async (messages) => {
+	let capturedModel: AiModelInfo | undefined;
+	llmService.invokeStructuredLlm = (async (messages, modelInfo) => {
 		capturedPrompt = String(messages[0]?.content ?? '');
+		capturedModel = modelInfo;
 		return { response: 'Hello', emotion: 'happy' };
 	}) as typeof llmService.invokeStructuredLlm;
 
 	try {
+		const repairModelInfo = getAiModelInfo('anthropic/claude-sonnet-5');
 		const result = await llmService.repairStructuredLlmOutput(
 			new StructuredOutputValidationError('The model returned malformed JSON.', '{"response":'),
 			'test-user',
 			z.object({ response: z.string(), emotion: z.string() }),
-			{ requiredSchema: '{"response": "string", "emotion": "string"}' }
+			{ requiredSchema: '{"response": "string", "emotion": "string"}', repairModelInfo }
 		);
 
 		assert.deepEqual(result, { response: 'Hello', emotion: 'happy' });
+		assert.equal(capturedModel, repairModelInfo);
 		assert.match(capturedPrompt, /PREVIOUS FAILED OUTPUT/);
 		assert.match(capturedPrompt, /\{"response":/);
 		assert.match(capturedPrompt, /"emotion": "string"/);

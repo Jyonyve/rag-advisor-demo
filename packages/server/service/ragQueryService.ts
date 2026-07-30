@@ -6,7 +6,7 @@ import { buildChatCompletion } from '../util/llmUtils.js';
 import { FilterCriteria, FilterCriteriaSchema } from '../util/schemaUtils.js';
 import { flowLogger } from '../util/jsonlLogger.js';
 import { buildFilterCriteriaPrompt } from '../util/templateUtils.js';
-import { DEFAULT_EXTRACTION_MODEL, AiModelInfo } from '@rag-advisor-demo/shared/domain';
+import { AiModelInfo } from '@rag-advisor-demo/shared/domain';
 
 // The service output interface, returning query texts and structured filter criteria.
 export interface TransformedQuery {
@@ -36,7 +36,8 @@ export const ragQueryService = {
 		sessionId: string,
 		userId: string,
 		userName: string,
-		charName: string
+		charName: string,
+		modelInfo: AiModelInfo
 	): Promise<TransformedQuery> {
 		try {
 			const termRes = await termStore.getTermsForSession(sessionId);
@@ -50,11 +51,11 @@ export const ragQueryService = {
 			});
 
 			const [translatedUserInput, extractedData] = await Promise.allSettled([
-				ragQueryService._translateToEnglish(userInput, termGuidanceMap, userId),
+				ragQueryService._translateToEnglish(userInput, termGuidanceMap, userId, modelInfo),
 				ragQueryService._extractAndTranslateData(
 					userInput, // Raw Korean for better term mapping
 					termGuidanceMap,
-					DEFAULT_EXTRACTION_MODEL,
+					modelInfo,
 					userId,
 					userName,
 					charName
@@ -138,7 +139,8 @@ export const ragQueryService = {
 	async _translateToEnglish(
 		koreanText: string,
 		termGuidanceMap: Map<string, string>,
-		userId: string
+		userId: string,
+		modelInfo: AiModelInfo
 	): Promise<string> {
 		// First, apply known term mappings
 		let processedText = koreanText;
@@ -157,7 +159,7 @@ Provide only the English translation:`;
 		const messages = [buildChatCompletion('user', translationPrompt)];
 
 		try {
-			const translatedText = await llmService.invokeLlm(messages, DEFAULT_EXTRACTION_MODEL, userId);
+			const translatedText = await llmService.invokeLlm(messages, modelInfo, userId);
 
 			// **FIXED: Return plain text, not JSON.parse**
 			return translatedText.trim() || processedText;

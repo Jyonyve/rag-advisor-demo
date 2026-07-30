@@ -75,13 +75,14 @@ uploads surviving a restart, redeploy, or idle spin-down.
 Add each secret directly in Render's Environment page. Do not place any value in a Docker build
 argument, repository file, or screenshot.
 
-| Environment variable         | Required                  | Notes                                                                                             |
-| ---------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`               | Yes                       | Use the dedicated Neon pooled connection URL.                                                     |
-| `SUPERTOKENS_CONNECTION_URI` | Yes                       | Hosted SuperTokens connection URI.                                                                |
-| `SUPERTOKENS_API_KEY`        | Yes                       | Hosted SuperTokens API key.                                                                       |
-| `OPENAI_API_KEY`             | Yes for current retrieval | Server-only query and stored-content embeddings. It is never used as a fallback for user chat.    |
-| `SECRET_ENCRYPTION_KEY`      | Yes                       | New public-demo-only random secret of at least 32 bytes; do not reuse the private deployment key. |
+| Environment variable                        | Required                  | Notes                                                                                             |
+| ------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                              | Yes                       | Use the dedicated Neon pooled connection URL.                                                     |
+| `SUPERTOKENS_CONNECTION_URI`                | Yes                       | Hosted SuperTokens connection URI.                                                                |
+| `SUPERTOKENS_API_KEY`                       | Yes                       | Hosted SuperTokens API key.                                                                       |
+| `OPENAI_EMBEDDING_API_KEY`                  | Yes for current retrieval | Server-only query and stored-content embeddings. It is never used as a fallback for user chat.    |
+| `EMBEDDING_RATE_LIMIT_MAX_CALLS_PER_MINUTE` | Recommended               | Per-user in-process embedding limit. Use `60` for the public demo.                                |
+| `SECRET_ENCRYPTION_KEY`                     | Yes                       | New public-demo-only random secret of at least 32 bytes; do not reuse the private deployment key. |
 
 ## First deployment checks
 

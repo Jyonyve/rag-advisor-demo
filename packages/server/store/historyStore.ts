@@ -123,6 +123,7 @@ export const historyStore = {
 
 	queryHistories: async (
 		characterId: string,
+		userId: string,
 		queryTexts: string[],
 		filterCriteria?: FilterCriteria,
 		_whereDocument?: unknown,
@@ -140,7 +141,12 @@ export const historyStore = {
 		if (!candidates.length) return emptyResponse();
 		const results = await searchMemoryEmbeddings(
 			queryTexts,
-			{ sourceType: 'history', characterId, sourceIds: candidates.map((item) => item.historyId) },
+			{
+				sourceType: 'history',
+				userId,
+				characterId,
+				sourceIds: candidates.map((item) => item.historyId),
+			},
 			limit,
 			queryEmbeddingCache,
 			ragTraceContext

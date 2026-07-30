@@ -36,6 +36,7 @@ import {
 	mergeFinanceRecommendationLore,
 } from './financeProductFilter.js';
 import { memoryEngine } from './memoryEngine.js';
+import { modelCatalogService } from './modelCatalogService.js';
 import { personaEngine } from './personaEngine.js';
 import { resolveRagContext } from './ragContextService.js';
 
@@ -190,7 +191,8 @@ export const finalizeChatTurn = async (chatTurnCdo: ChatTurnCdo): Promise<ChatTu
 
 export const enrichChatTurn = async (chatTurnCdo: ChatTurnCdo): Promise<ChatTurn> => {
 	const basicChatTurn: ChatTurn = createBasicChatTurn(chatTurnCdo);
-	return memoryEngine.enrichChatTurnViaLlm(basicChatTurn);
+	const modelInfo = await modelCatalogService.resolveAiModelInfo(basicChatTurn.response.model);
+	return memoryEngine.enrichChatTurnViaLlm(basicChatTurn, { modelInfo });
 };
 
 /**
@@ -285,6 +287,7 @@ async function _generateAndAppendResponse(
 			tempTurn.userId,
 			recentChatTurn,
 			langCode,
+			aiModelInfo,
 			{
 				userShowName: profileInfo.showName,
 				characterShowName: characterInfo.showName,

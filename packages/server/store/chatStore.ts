@@ -186,6 +186,7 @@ export const chatStore = {
 
 	queryChatTurns: async (
 		sessionId: string,
+		userId: string,
 		queryTexts: string[],
 		filterCriteria?: FilterCriteria,
 		_whereDocument?: unknown,
@@ -206,7 +207,7 @@ export const chatStore = {
 			: queryTexts;
 		const results = await searchMemoryEmbeddings(
 			queryWithEmotion,
-			{ sourceType: 'chat', sessionId, sourceIds: candidates.map((turn) => turn.chatTurnId) },
+			{ sourceType: 'chat', userId, sessionId, sourceIds: candidates.map((turn) => turn.chatTurnId) },
 			limit,
 			queryEmbeddingCache,
 			ragTraceContext
@@ -219,13 +220,14 @@ export const chatStore = {
 
 	queryChatTurnsByKeywords: async (
 		sessionId: string,
+		userId: string,
 		keywords: string[],
 		excludeIds: string[] = [],
 		limit = 100
 	): Promise<ChatResponse> => {
 		const embeddingRows = await searchMemoryEmbeddingsByKeywords(
 			keywords,
-			{ sourceType: 'chat', sessionId },
+			{ sourceType: 'chat', userId, sessionId },
 			{ excludeSourceIds: excludeIds, limit }
 		);
 		const sourceIds = embeddingRows.map((row) => row.sourceId);

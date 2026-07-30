@@ -104,7 +104,8 @@ export const documentGenerationService = {
 					input.requestText,
 					userId,
 					recentTurns,
-					langCode
+					langCode,
+					aiModelInfo
 				)
 			: { langCode, shortTermHistory: [], longTermHistory: [], relevantLore: [], relevantHistory: [] };
 		const character = characterResponse.characterInfo;
@@ -180,7 +181,8 @@ Use the user's language unless the requested artifact clearly requires another l
 					queryText,
 					userId,
 					recentTurns,
-					langCode
+					langCode,
+					aiModelInfo
 				)
 			: { langCode, shortTermHistory: [], longTermHistory: [], relevantLore: [], relevantHistory: [] };
 		const character = characterResponse.characterInfo;

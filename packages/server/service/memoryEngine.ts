@@ -2,7 +2,7 @@
 
 import { MemoryResponse } from '@rag-advisor-demo/shared/api';
 import { LangCode, DEFAULT_EMOTION, NA } from '@rag-advisor-demo/shared/config';
-import { ChatTurn, DEFAULT_EXTRACTION_MODEL, RecapInfo } from '@rag-advisor-demo/shared/domain';
+import { AiModelInfo, ChatTurn, RecapInfo } from '@rag-advisor-demo/shared/domain';
 import { parseSessionId, convertArrayToString } from '@rag-advisor-demo/shared/util';
 import { ChatCompletionMessageParam } from 'openai/resources/index.mjs';
 import { characterStore } from '../store/characterStore.js';
@@ -51,6 +51,7 @@ export const memoryEngine = {
 		userId: string,
 		recentChatTurns: ChatTurn[],
 		langCode: LangCode,
+		modelInfo: AiModelInfo,
 		context?: MemoryRecallContext
 	): Promise<MemoryResponse> {
 		const { characterId } = parseSessionId(sessionId);
@@ -81,7 +82,8 @@ export const memoryEngine = {
 							sessionId,
 							userId,
 							userShowName,
-							characterShowName
+							characterShowName,
+							modelInfo
 						);
 			flowLogger.info('memoryEngine', 'queryTransformed', {
 				sessionId,
@@ -102,6 +104,7 @@ export const memoryEngine = {
 				await Promise.all([
 					chatStore.queryChatTurns(
 						sessionId,
+						userId,
 						transformedQuery.queryTexts,
 						transformedQuery.filterCriteria,
 						undefined,
@@ -122,6 +125,7 @@ export const memoryEngine = {
 					),
 					historyStore.queryHistories(
 						characterId,
+						userId,
 						transformedQuery.queryTexts,
 						transformedQuery.filterCriteria,
 						undefined,
@@ -131,6 +135,7 @@ export const memoryEngine = {
 					),
 					recapStore.queryRecaps(
 						sessionId,
+						userId,
 						transformedQuery.queryTexts,
 						'recap',
 						transformedQuery.filterCriteria,
@@ -160,11 +165,13 @@ export const memoryEngine = {
 			const semanticChatTurns = longTermChatRes.chatTurns || [];
 			const keywordFallbackChatTurns = await getKeywordFallbackChatTurns(
 				sessionId,
+				userId,
 				boostTerms,
 				semanticChatTurns
 			);
 			const keywordFallbackRecaps = await getKeywordFallbackRecaps(
 				sessionId,
+				userId,
 				boostTerms,
 				relevantRecaps || []
 			);
@@ -211,6 +218,7 @@ export const memoryEngine = {
 
 				const fallbackChatRes = await chatStore.queryChatTurns(
 					sessionId,
+					userId,
 					[criticalTerm], // Just the critical term
 					undefined, // No metadata filtering
 					undefined,
@@ -347,7 +355,7 @@ export const memoryEngine = {
 	 */
 	async enrichChatTurnViaLlm(
 		turn: ChatTurn,
-		options: { skipTermNormalization?: boolean } = {}
+		options: { modelInfo: AiModelInfo; skipTermNormalization?: boolean }
 	): Promise<ChatTurn> {
 		const { sessionId, userId } = turn;
 		const { characterId } = parseSessionId(sessionId);
@@ -359,7 +367,7 @@ export const memoryEngine = {
 			)}\n${parseEntriesToConversation(turn.response.entries)}`;
 			const extractedKpns = options.skipTermNormalization
 				? []
-				: await llmService.extractProperNouns(textForNer, userId);
+				: await llmService.extractProperNouns(textForNer, userId, options.modelInfo);
 
 			// 2. Fetch all necessary context for the enrichment prompt.
 			const [profileInfo, charInfo, loreRes, historyRes, termGuidanceMap] = await Promise.all([
@@ -367,7 +375,7 @@ export const memoryEngine = {
 				characterStore.getCharacter(characterId),
 				loreStore.getLoresBySession(sessionId, characterId, userId),
 				historyStore.getHistories(characterId),
-				termStore.ensureAndGetTermsForPrompt(sessionId, userId, extractedKpns),
+				termStore.ensureAndGetTermsForPrompt(sessionId, userId, extractedKpns, options.modelInfo),
 			]);
 
 			const loreContexts = mapLoreContexts(loreRes.loreInfos);
@@ -412,7 +420,7 @@ export const memoryEngine = {
 
 			const enrichment = await llmService.invokeStructuredLlm(
 				messages,
-				DEFAULT_EXTRACTION_MODEL,
+				options.modelInfo,
 				userId,
 				zodSchema
 			);
@@ -439,6 +447,7 @@ export const memoryEngine = {
 
 const getKeywordFallbackChatTurns = async (
 	sessionId: string,
+	userId: string,
 	boostTerms: string[],
 	existingTurns: ChatTurn[],
 	limit = 10
@@ -450,6 +459,7 @@ const getKeywordFallbackChatTurns = async (
 		(
 			await chatStore.queryChatTurnsByKeywords(
 				sessionId,
+				userId,
 				boostTerms,
 				[...existingIds],
 				Math.max(limit * 5, 50)
@@ -470,6 +480,7 @@ const getKeywordFallbackChatTurns = async (
 
 const getKeywordFallbackRecaps = async (
 	sessionId: string,
+	userId: string,
 	boostTerms: string[],
 	existingRecaps: RecapInfo[],
 	limit = 10
@@ -479,6 +490,7 @@ const getKeywordFallbackRecaps = async (
 	const existingIds = new Set(existingRecaps.map((recap) => recap.recapId));
 	const keywordCandidateRecaps = await recapStore.queryRecapsByKeywords(
 		sessionId,
+		userId,
 		boostTerms,
 		'recap',
 		[...existingIds],

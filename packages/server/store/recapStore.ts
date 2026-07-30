@@ -68,6 +68,7 @@ export const recapStore = {
 
 	async queryRecaps(
 		sessionId: string,
+		userId: string,
 		queryTexts: string[],
 		type: RecapType,
 		filterCriteria?: FilterCriteria,
@@ -92,7 +93,7 @@ export const recapStore = {
 		if (!candidates.length) return [];
 		const results = await searchMemoryEmbeddings(
 			queryTexts,
-			{ sourceType: 'recap', sessionId, sourceIds: candidates.map((item) => item.recapId) },
+			{ sourceType: 'recap', userId, sessionId, sourceIds: candidates.map((item) => item.recapId) },
 			limit,
 			queryEmbeddingCache,
 			ragTraceContext
@@ -103,6 +104,7 @@ export const recapStore = {
 
 	async queryRecapsByKeywords(
 		sessionId: string,
+		userId: string,
 		keywords: string[],
 		type: RecapType,
 		excludeIds: string[] = [],
@@ -110,7 +112,7 @@ export const recapStore = {
 	): Promise<RecapInfo[]> {
 		const embeddingRows = await searchMemoryEmbeddingsByKeywords(
 			keywords,
-			{ sourceType: 'recap', sessionId },
+			{ sourceType: 'recap', userId, sessionId },
 			{ excludeSourceIds: excludeIds, limit }
 		);
 		const sourceIds = embeddingRows.map((row) => row.sourceId);
