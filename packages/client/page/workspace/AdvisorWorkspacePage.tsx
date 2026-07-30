@@ -14,8 +14,8 @@ import MenuRounded from '@mui/icons-material/MenuRounded';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TuneRounded from '@mui/icons-material/TuneRounded';
 import { Dialog, DialogContent, IconButton, Tooltip } from '@mui/material';
-import type { ChatGenerationStage } from '@rag-advisor-demo/shared/api';
-import { DEFAULT_CHAT_MODEL } from '@rag-advisor-demo/shared/config';
+import type { ChatGenerationStage, DemoGuestInitResponse } from '@rag-advisor-demo/shared/api';
+import { DEFAULT_CHAT_MODEL, MODULE_NAMES } from '@rag-advisor-demo/shared/config';
 import type {
 	AssistantDomain,
 	ChatTurnCdo,
@@ -25,8 +25,10 @@ import type {
 	RagEvidenceItem,
 	SessionInfo,
 	TempChatTurn,
+	DemoUsageStatus,
 } from '@rag-advisor-demo/shared/domain';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { demoUsageStatusSchema } from '@rag-advisor-demo/shared/domain';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { EmailPasswordPreBuiltUI } from 'supertokens-auth-react/recipe/emailpassword/prebuiltui.js';
 import { AuthPage } from 'supertokens-auth-react/ui/index.js';
@@ -43,6 +45,7 @@ import { useChatState } from '../../hook/state/useChatState.js';
 import { useAuth } from '../../provider/AuthProvider.jsx';
 import { useLanguage } from '../../provider/LanguageProvider.js';
 import { parseEntriesToText, parseTextToEntries } from '../../util/chatParseUtils.js';
+import { apiClient, genApiUrl } from '../../util/clientApiHelpers.js';
 import { getEvidenceAnchorId, GroundedResponse } from './GroundedResponse.js';
 import {
 	buildFinanceDomainProfile,
@@ -79,6 +82,23 @@ const formatSessionDate = (value: string, lang: 'kor' | 'eng'): string => {
 const WorkspaceLogin = ({ onLogin }: { onLogin: () => void }) => {
 	const { lang, toggleLang } = useLanguage();
 	const text = getWorkspaceCopy(lang);
+	const [isStartingDemo, setIsStartingDemo] = useState(false);
+	const [demoError, setDemoError] = useState<string>();
+	const startDemo = async () => {
+		setIsStartingDemo(true);
+		setDemoError(undefined);
+		try {
+			await apiClient.post<DemoGuestInitResponse>(genApiUrl(MODULE_NAMES.DEMO, 'createGuest'));
+			window.location.assign('/workspace');
+		} catch {
+			setDemoError(
+				lang === 'kor'
+					? '데모를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.'
+					: 'The demo could not be started. Please try again shortly.'
+			);
+			setIsStartingDemo(false);
+		}
+	};
 	return (
 		<div className="advisor-landing">
 			<header className="advisor-landing__nav">
@@ -108,12 +128,24 @@ const WorkspaceLogin = ({ onLogin }: { onLogin: () => void }) => {
 					</h1>
 					<p className="advisor-landing__lede">{text.landingDescription}</p>
 					<div className="advisor-landing__actions">
-						<button className="advisor-button advisor-button--primary" type="button" onClick={onLogin}>
-							{text.openWorkspace}
+						<button
+							className="advisor-button advisor-button--primary"
+							type="button"
+							onClick={startDemo}
+							disabled={isStartingDemo}
+						>
+							{isStartingDemo
+								? lang === 'kor'
+									? '데모 준비 중…'
+									: 'Starting demo…'
+								: lang === 'kor'
+									? '데모 체험'
+									: 'Try Demo'}
 							<ArrowForwardRounded />
 						</button>
 						<span>{text.noRealData}</span>
 					</div>
+					{demoError ? <p className="advisor-inline-error">{demoError}</p> : null}
 				</div>
 				<div className="advisor-landing__preview" aria-label={text.livePreview}>
 					<div className="advisor-preview__header">
@@ -1202,10 +1234,32 @@ export function AdvisorWorkspacePage() {
 		logout,
 		userId,
 		userProfile,
+		isDemoGuest,
 	} = useAuth();
 	const [selectedDomain, setSelectedDomain] = useState<AssistantDomain>('finance');
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const sessionQuery = useSessionApi().getSessionsByUserId(userId ?? '');
+	const [demoUsage, setDemoUsage] = useState<DemoUsageStatus>();
+	const refreshDemoUsage = useCallback(async () => {
+		if (!isDemoGuest) return;
+		try {
+			const response = await apiClient.get<DemoUsageStatus>(genApiUrl(MODULE_NAMES.DEMO, 'getUsage'));
+			setDemoUsage(demoUsageStatusSchema.parse(response.data));
+		} catch {
+			setDemoUsage(undefined);
+		}
+	}, [isDemoGuest]);
+
+	useEffect(() => {
+		void refreshDemoUsage();
+		const handleUsage = (event: Event) => {
+			const usage = (event as CustomEvent<DemoUsageStatus>).detail;
+			if (usage) setDemoUsage(usage);
+			else void refreshDemoUsage();
+		};
+		window.addEventListener('demo-usage-updated', handleUsage);
+		return () => window.removeEventListener('demo-usage-updated', handleUsage);
+	}, [refreshDemoUsage]);
 	const supportedSessions = useMemo(
 		() =>
 			(sessionQuery.data?.sessionInfos ?? []).filter(
@@ -1287,6 +1341,28 @@ export function AdvisorWorkspacePage() {
 					<AddRounded />
 					{text.newExploration}
 				</button>
+				{isDemoGuest && demoUsage ? (
+					<div className="advisor-demo-usage" aria-live="polite">
+						<strong>{lang === 'kor' ? '라이브 데모 사용량' : 'Live demo usage'}</strong>
+						<span>
+							{lang === 'kor' ? '채팅' : 'Chat'}: {demoUsage.chat.remaining} / {demoUsage.chat.limit}{' '}
+							{lang === 'kor' ? '남음' : 'remaining'}
+						</span>
+						<span>
+							{lang === 'kor' ? '리포트' : 'Report'}: {demoUsage.report.remaining} /{' '}
+							{demoUsage.report.limit} {lang === 'kor' ? '남음' : 'remaining'}
+						</span>
+						<small>
+							{demoUsage.mode === 'live'
+								? lang === 'kor'
+									? '라이브'
+									: 'Live'
+								: lang === 'kor'
+									? '결정론적 대체 응답'
+									: 'Deterministic fallback'}
+						</small>
+					</div>
+				) : null}
 
 				<button
 					className="advisor-language-toggle advisor-language-toggle--sidebar"

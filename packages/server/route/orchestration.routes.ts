@@ -13,7 +13,11 @@ import {
 	ApiError,
 } from '@rag-advisor-demo/shared/domain';
 import { RECENT_CHAT_TURN } from '@rag-advisor-demo/shared/config';
-import { receiveBotResponse, finalizeChatTurn } from '../service/orchestrationService.js';
+import {
+	receiveBotResponse,
+	receiveDemoFallbackResponse,
+	finalizeChatTurn,
+} from '../service/orchestrationService.js';
 import { ChatTurnCdoSchema, ReceiveBotResponseBodySchema } from '../util/schemaUtils.js';
 import { sessionStore } from '../store/sessionStore.js';
 import { characterStore } from '../store/characterStore.js';
@@ -23,6 +27,15 @@ import z from 'zod';
 import { ReceiveBotResponseStreamEvent } from '@rag-advisor-demo/shared/api';
 import { finalizationJobService } from '../service/finalizationJobService.js';
 import { modelCatalogService } from '../service/modelCatalogService.js';
+import {
+	classifyDemoProviderError,
+	finishDemoGeneration,
+	getDemoUsageStatus,
+	getPublicDemoModel,
+	isDemoGuest,
+	reserveDemoGeneration,
+} from '../service/demoAccessService.js';
+import { getServerEnv } from '../config/env.js';
 
 const router: Router = express.Router();
 
@@ -88,7 +101,17 @@ const resolveReceiveBotResponseContext = async (body: ReceiveBotResponseBody, us
 		userId,
 		inputJsonString: JSON.stringify(entries),
 	};
-	const aiModelInfo = await modelCatalogService.resolveAiModelInfo(modelName);
+	const demoGuest = await isDemoGuest(userId);
+	const requestLength = entries.reduce((total, entry) => total + entry.prompt.length, 0);
+	if (demoGuest && requestLength > getServerEnv().DEMO_MAX_INPUT_CHARS) {
+		throw new ApiError(
+			400,
+			`Demo requests must not exceed ${getServerEnv().DEMO_MAX_INPUT_CHARS} characters.`
+		);
+	}
+	const aiModelInfo = demoGuest
+		? getPublicDemoModel('chat')
+		: await modelCatalogService.resolveAiModelInfo(modelName);
 	const recentChatTurnString = JSON.stringify(
 		chatResponse.chatTurns.sort((a, b) => a.sequence - b.sequence).slice(-RECENT_CHAT_TURN)
 	);
@@ -102,7 +125,70 @@ const resolveReceiveBotResponseContext = async (body: ReceiveBotResponseBody, us
 		profileInfo,
 		aiModelInfo,
 		recentChatTurnString,
+		demoGuest,
 	};
+};
+
+const receiveWithDemoPolicy = async (
+	context: Awaited<ReturnType<typeof resolveReceiveBotResponseContext>>,
+	options: Parameters<typeof receiveBotResponse>[5] = {}
+) => {
+	if (!context.demoGuest) {
+		return receiveBotResponse(
+			context.tempChatTurnCdo,
+			context.characterInfo,
+			context.profileInfo,
+			context.aiModelInfo,
+			context.recentChatTurnString,
+			options
+		);
+	}
+	const reservation = await reserveDemoGeneration(context.tempChatTurnCdo.userId, 'chat');
+	if (!reservation.allowed) {
+		const fallback = await receiveDemoFallbackResponse(
+			context.tempChatTurnCdo,
+			context.characterInfo,
+			context.profileInfo,
+			context.recentChatTurnString,
+			reservation.reason,
+			context.aiModelInfo.model
+		);
+		fallback.demoUsage = await getDemoUsageStatus(
+			context.tempChatTurnCdo.userId,
+			'fallback',
+			reservation.reason
+		);
+		return fallback;
+	}
+
+	const timeoutSignal = AbortSignal.timeout(getServerEnv().DEMO_LLM_TIMEOUT_MS);
+	const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
+	try {
+		const response = await receiveBotResponse(
+			context.tempChatTurnCdo,
+			context.characterInfo,
+			context.profileInfo,
+			context.aiModelInfo,
+			context.recentChatTurnString,
+			{ ...options, signal }
+		);
+		await finishDemoGeneration(reservation.usageId, 'succeeded');
+		response.demoUsage = await getDemoUsageStatus(context.tempChatTurnCdo.userId, 'live');
+		return response;
+	} catch (error) {
+		await finishDemoGeneration(reservation.usageId, 'failed');
+		const reason = timeoutSignal.aborted ? 'PROVIDER_TIMEOUT' : classifyDemoProviderError(error);
+		const fallback = await receiveDemoFallbackResponse(
+			context.tempChatTurnCdo,
+			context.characterInfo,
+			context.profileInfo,
+			context.recentChatTurnString,
+			reason,
+			context.aiModelInfo.model
+		);
+		fallback.demoUsage = await getDemoUsageStatus(context.tempChatTurnCdo.userId, 'fallback', reason);
+		return fallback;
+	}
 };
 
 const writeStreamEvent = (res: Response, event: ReceiveBotResponseStreamEvent): void => {
@@ -131,14 +217,9 @@ router.post(
 			const context = await resolveReceiveBotResponseContext(parsedBody, userId);
 
 			// Call the main orchestration service function with the unpacked request body
-			const response = await receiveBotResponse(
-				context.tempChatTurnCdo,
-				context.characterInfo,
-				context.profileInfo,
-				context.aiModelInfo,
-				context.recentChatTurnString,
-				{ adultContentEnabled: context.adultContentEnabled }
-			);
+			const response = await receiveWithDemoPolicy(context, {
+				adultContentEnabled: context.adultContentEnabled,
+			});
 
 			res.status(200).json(response);
 		}
@@ -174,19 +255,12 @@ router.post(
 			});
 
 			try {
-				const tempChatTurn = await receiveBotResponse(
-					context.tempChatTurnCdo,
-					context.characterInfo,
-					context.profileInfo,
-					context.aiModelInfo,
-					context.recentChatTurnString,
-					{
-						adultContentEnabled: context.adultContentEnabled,
-						signal: disconnectController.signal,
-						onStatus: (stage) => writeStreamEvent(res, { type: 'status', stage }),
-						onDelta: (text) => writeStreamEvent(res, { type: 'delta', text }),
-					}
-				);
+				const tempChatTurn = await receiveWithDemoPolicy(context, {
+					adultContentEnabled: context.adultContentEnabled,
+					signal: disconnectController.signal,
+					onStatus: (stage) => writeStreamEvent(res, { type: 'status', stage }),
+					onDelta: (text) => writeStreamEvent(res, { type: 'delta', text }),
+				});
 				writeStreamEvent(res, { type: 'complete', data: tempChatTurn });
 			} catch (error: unknown) {
 				if (!disconnectController.signal.aborted) {

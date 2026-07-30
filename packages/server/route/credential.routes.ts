@@ -2,12 +2,15 @@
 import express, { type Request, type Response, type Router } from 'express';
 import { verifySession } from 'supertokens-node/recipe/session/framework/express';
 import { asyncHandler, genRoutePattern, validateRequestData } from '../util/routeHelpers.js';
-import { assertSessionUser } from '../util/authUtils.js';
+import { assertNotDemoGuest, assertSessionUser } from '../util/authUtils.js';
 import { credentialStore } from '../store/credentialStore.js';
 import { API_KEY_TYPES, type ApiKeyType, type UserApiKeys } from '@rag-advisor-demo/shared/domain';
 
 const router: Router = express.Router();
 router.use(verifySession());
+router.use((req, _res, next) => {
+	assertNotDemoGuest(req).then(() => next(), next);
+});
 
 /**
  * POST /api/credential/validate-api-keys

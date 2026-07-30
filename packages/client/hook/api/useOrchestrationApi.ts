@@ -107,6 +107,11 @@ export const useOrchestrationApi = () => {
 			if (!completedTurn) {
 				throw new ApiError(502, 'The response stream ended before completion.');
 			}
+			if (completedTurn.demoUsage && typeof window !== 'undefined') {
+				window.dispatchEvent(
+					new CustomEvent('demo-usage-updated', { detail: completedTurn.demoUsage })
+				);
+			}
 			return completedTurn;
 		},
 	});

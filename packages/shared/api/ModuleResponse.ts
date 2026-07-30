@@ -17,6 +17,7 @@ import {
 	ChatEntry,
 	ApiKeyType,
 	DocumentInfo,
+	DemoUsageStatus,
 } from '../domain/index.js';
 
 export interface ApiErrorResponse {
@@ -137,7 +138,11 @@ export type ModelCatalogResponse = {
 	source: 'live' | 'fallback';
 };
 
-export type DocumentResponse = { documentInfo: DocumentInfo; documentInfos: DocumentInfo[] };
+export type DocumentResponse = {
+	documentInfo: DocumentInfo;
+	documentInfos: DocumentInfo[];
+	demoUsage?: DemoUsageStatus;
+};
 
 export type PublicDemoTurn = { sequence: number; request: ChatEntry[]; response: ChatEntry[] };
 
@@ -149,3 +154,5 @@ export type PublicDemoResponse = {
 	totalTurnCount: number;
 	truncated: boolean;
 };
+
+export type DemoGuestInitResponse = { status: 'OK'; usage: DemoUsageStatus };

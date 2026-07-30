@@ -3,7 +3,12 @@
 import express, { type Request, type Response, type Router } from 'express';
 import { verifySession } from 'supertokens-node/recipe/session/framework/express';
 import { asyncHandler, genRoutePattern, validateRequestData } from '../util/routeHelpers.js';
-import { assertOwnedProfile, assertOwnedSession, assertSessionUser } from '../util/authUtils.js';
+import {
+	assertOwnedProfile,
+	assertOwnedSession,
+	assertReadableCharacter,
+	assertSessionUser,
+} from '../util/authUtils.js';
 import { sessionStore } from '../store/sessionStore.js';
 import { ApiError, SessionContentPolicy, SessionInfo } from '@rag-advisor-demo/shared/domain';
 
@@ -27,6 +32,7 @@ router.post(
 		validateRequestData(req.body, 'body', ['userId', 'characterId']);
 		const { characterId, firstCharMessage = '', title = '' } = req.body;
 		const userId = assertSessionUser(req, req.body.userId);
+		await assertReadableCharacter(req, characterId);
 		const contentPolicy: SessionContentPolicy = req.body.contentPolicy ?? 'general';
 		if (contentPolicy !== 'general' && contentPolicy !== 'adult') {
 			throw new ApiError(400, 'Invalid session content policy.');

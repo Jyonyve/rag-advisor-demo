@@ -11,12 +11,15 @@ import {
 	validateRequestData,
 } from '../util/routeHelpers.js';
 import { isValidAiModelInfo } from '@rag-advisor-demo/shared/util';
-import { assertSessionUser } from '../util/authUtils.js';
+import { assertNotDemoGuest, assertSessionUser } from '../util/authUtils.js';
 
 // Import the necessary server-side utils
 
 const router: Router = express.Router();
 router.use(verifySession());
+router.use((req, _res, next) => {
+	assertNotDemoGuest(req).then(() => next(), next);
+});
 
 router.get(
 	genRoutePattern('getModelCatalog'),

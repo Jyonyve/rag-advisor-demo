@@ -14,3 +14,4 @@ export * from './error/index.js';
 export * from './image/index.js';
 export * from './document/index.js';
 export * from './rag/index.js';
+export * from './demo/index.js';

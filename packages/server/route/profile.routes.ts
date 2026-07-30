@@ -13,7 +13,7 @@ import {
 import { ProfileInfo, ProfileMetadata } from '@rag-advisor-demo/shared/domain';
 import { buildProfileId } from '@rag-advisor-demo/shared/util';
 import {
-	assertOwnedCharacter,
+	assertReadableCharacter,
 	assertOwnedProfile,
 	assertOwnedSession,
 	assertSessionUser,
@@ -94,8 +94,17 @@ router.get(
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
 		const { showName } = req.params;
 		validateRequestData(req.params, 'params', ['showName']);
-
-		const response = await profileStore.getProfilesByShowName(showName);
+		const userId = assertSessionUser(req);
+		const ownedProfiles = await profileStore.getAllProfilesByUserId(userId);
+		const profileInfos = ownedProfiles.profileInfos.filter(
+			(profile) => profile.showName === showName
+		);
+		const response = {
+			...ownedProfiles,
+			ids: profileInfos.map(({ profileId }) => profileId),
+			profileInfos,
+			profileInfo: profileInfos[0] ?? ({} as ProfileInfo),
+		};
 		res.status(200).json(response);
 	})
 );
@@ -120,7 +129,7 @@ router.post(
 			const session = await assertOwnedSession(req, req.body.sessionId);
 			req.body.userId = assertSessionUser(req, req.body.userId);
 			req.body.profileId = buildProfileId(req.body.sessionId, req.body.userId);
-			const character = await assertOwnedCharacter(req, session.characterId);
+			const character = await assertReadableCharacter(req, session.characterId);
 			req.body.domainProfile = parseDomainProfileForCharacter(
 				req.body.domainProfile,
 				character.domain

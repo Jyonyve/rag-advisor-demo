@@ -16,10 +16,18 @@ import {
 } from '@rag-advisor-demo/shared/domain';
 import { ApiError } from '@rag-advisor-demo/shared/domain';
 import { documentStore } from '../store/documentStore.js';
-import { assertOwnedSession, getSessionUserId } from '../util/authUtils.js';
+import { assertNotDemoGuest, assertOwnedSession, getSessionUserId } from '../util/authUtils.js';
 import { asyncHandler, genRoutePattern } from '../util/routeHelpers.js';
 import { documentGenerationService } from '../service/documentGenerationService.js';
 import { financeReportService } from '../service/financeReportService.js';
+import {
+	classifyDemoProviderError,
+	finishDemoGeneration,
+	getDemoUsageStatus,
+	isDemoGuest,
+	reserveDemoGeneration,
+} from '../service/demoAccessService.js';
+import { getServerEnv } from '../config/env.js';
 
 const router: Router = express.Router();
 
@@ -35,6 +43,7 @@ router.post(
 	genRoutePattern('createManualDraft'),
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		await assertNotDemoGuest(req);
 		const input = parseBody<ManualDocumentDraftCreate>(manualDocumentDraftCreateSchema, req.body);
 		const session = await assertOwnedSession(req, input.sessionId);
 		const document = await documentStore.createDraft({
@@ -54,6 +63,7 @@ router.post(
 	genRoutePattern('generateDraft'),
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		await assertNotDemoGuest(req);
 		const input = parseBody<GeneratedDocumentDraftCreate>(
 			generatedDocumentDraftCreateSchema,
 			req.body
@@ -74,8 +84,63 @@ router.post(
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
 		const input = parseBody<FinanceReportDraftCreate>(financeReportDraftCreateSchema, req.body);
 		const session = await assertOwnedSession(req, input.sessionId);
-		const document = await financeReportService.generateDraft(input, getSessionUserId(req), session);
-		res.status(201).json({ documentInfo: document, documentInfos: [document] });
+		const userId = getSessionUserId(req);
+		if (!(await isDemoGuest(userId))) {
+			const document = await financeReportService.generateDraft(input, userId, session);
+			res.status(201).json({ documentInfo: document, documentInfos: [document] });
+			return;
+		}
+		if (input.requestText.length > getServerEnv().DEMO_MAX_INPUT_CHARS) {
+			throw new ApiError(
+				400,
+				`Demo requests must not exceed ${getServerEnv().DEMO_MAX_INPUT_CHARS} characters.`
+			);
+		}
+		const reservation = await reserveDemoGeneration(userId, 'report');
+		if (!reservation.allowed) {
+			const document = await financeReportService.generateFallbackDraft(
+				input,
+				userId,
+				session,
+				reservation.reason
+			);
+			res
+				.status(201)
+				.json({
+					documentInfo: document,
+					documentInfos: [document],
+					demoUsage: await getDemoUsageStatus(userId, 'fallback', reservation.reason),
+				});
+			return;
+		}
+		const signal = AbortSignal.timeout(getServerEnv().DEMO_LLM_TIMEOUT_MS);
+		try {
+			const document = await financeReportService.generateDraft(input, userId, session, { signal });
+			await finishDemoGeneration(reservation.usageId, 'succeeded');
+			res
+				.status(201)
+				.json({
+					documentInfo: document,
+					documentInfos: [document],
+					demoUsage: await getDemoUsageStatus(userId, 'live'),
+				});
+		} catch (error) {
+			await finishDemoGeneration(reservation.usageId, 'failed');
+			const reason = signal.aborted ? 'PROVIDER_TIMEOUT' : classifyDemoProviderError(error);
+			const document = await financeReportService.generateFallbackDraft(
+				input,
+				userId,
+				session,
+				reason
+			);
+			res
+				.status(201)
+				.json({
+					documentInfo: document,
+					documentInfos: [document],
+					demoUsage: await getDemoUsageStatus(userId, 'fallback', reason),
+				});
+		}
 	})
 );
 
@@ -105,6 +170,7 @@ router.patch(
 	genRoutePattern('updateDraft', ['documentId']),
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		await assertNotDemoGuest(req);
 		const input = parseBody<DocumentDraftUpdate>(documentDraftUpdateSchema, req.body);
 		const document = await documentStore.updateDraft(
 			req.params.documentId,
@@ -119,6 +185,7 @@ router.post(
 	genRoutePattern('rewriteDraft', ['documentId']),
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		await assertNotDemoGuest(req);
 		const input = parseBody<DocumentDraftRewrite>(documentDraftRewriteSchema, req.body);
 		const current = await documentStore.getDocument(req.params.documentId, getSessionUserId(req));
 		const session = await assertOwnedSession(req, current.sessionId);
@@ -136,6 +203,7 @@ router.post(
 	genRoutePattern('approve', ['documentId']),
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		await assertNotDemoGuest(req);
 		const document = await documentStore.approve(req.params.documentId, getSessionUserId(req));
 		res.status(200).json({ documentInfo: document, documentInfos: [document] });
 	})
@@ -154,6 +222,7 @@ router.put(
 	genRoutePattern('setRetrievalPreference', ['documentId']),
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		await assertNotDemoGuest(req);
 		const input = parseBody<{ enabled: boolean }>(documentRetrievalPreferenceSchema, req.body);
 		const document = await documentStore.setRetrievalPreference(
 			req.params.documentId,

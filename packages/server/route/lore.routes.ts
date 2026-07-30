@@ -10,7 +10,13 @@ import {
 	validateRequestData,
 	validateServiceId,
 } from '../util/routeHelpers.js';
-import { assertOwnedCharacter, assertOwnedSession, getSessionUserId } from '../util/authUtils.js';
+import {
+	assertOwnedCharacter,
+	assertOwnedSession,
+	assertReadableCharacter,
+	assertNotDemoGuest,
+	getSessionUserId,
+} from '../util/authUtils.js';
 import { parseOfficialLoreMetadataForCharacters } from '../util/domainValidationUtils.js';
 
 const router: Router = express.Router();
@@ -31,7 +37,7 @@ router.get(
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
 		const { characterId } = req.params;
 		validateServiceId(characterId, collectionType);
-		await assertOwnedCharacter(req, characterId);
+		await assertReadableCharacter(req, characterId);
 
 		const response = await loreStore.getLoresByCharacter(characterId, getSessionUserId(req));
 		res.status(200).json(response);
@@ -87,6 +93,7 @@ router.post(
 	genRoutePattern('storeLore'),
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		await assertNotDemoGuest(req);
 		validateRequestData(req.body, 'body', ['content']);
 		const requestedCharacterIds: string[] = Array.isArray(req.body.characterIds)
 			? req.body.characterIds

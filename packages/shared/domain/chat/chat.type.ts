@@ -2,6 +2,7 @@ import { EmotionValue, METADATA_TYPES } from '../../config/index.js';
 import { DefaultAiRole } from '../aimodel/aiInfo.type.js';
 import { Reference } from '../BaseTypes.js';
 import type { RagEvidenceDto } from '../rag/rag.type.js';
+import type { DemoUsageStatus } from '../demo/demo.type.js';
 
 export type ChatRoleType = DefaultAiRole;
 export type ChatEntry = { type: 'dialogue' | 'action'; prompt: string };
@@ -170,6 +171,7 @@ export interface TempChatTurnMetadata {
 export interface TempChatTurn extends TempChatTurnMetadata {
 	chatTurnSets: ChatMessageSet[];
 	ragEvidence?: RagEvidenceDto;
+	demoUsage?: DemoUsageStatus;
 }
 
 export type TempChatTurnCdo = Pick<TempChatTurn, 'sessionId' | 'sequence' | 'userId'> & {

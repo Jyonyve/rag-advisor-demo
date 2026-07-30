@@ -358,17 +358,31 @@ test('rejects mismatched Character, Profile ownership, and Profile domain before
 			}),
 		/Session Character does not match/
 	);
-	assert.throws(
-		() =>
-			resolveRagContext({
-				sessionId,
-				userId: USER_ID,
-				currentMessage: 'Demo request',
-				character: { ...FINANCE_CHARACTER, userId: 'other-user' },
-				profile: profile(sessionId, { domain: 'finance', constraints: [] }),
-				memories: memories(),
-			}),
-		/not owned/
+	assert.throws(() => {
+		const privateCharacter = {
+			...FINANCE_CHARACTER,
+			characterId: 'private-finance-assistant_demo',
+			userId: 'other-user',
+		};
+		const privateSessionId = buildSessionId(privateCharacter.characterId);
+		return resolveRagContext({
+			sessionId: privateSessionId,
+			userId: USER_ID,
+			currentMessage: 'Demo request',
+			character: privateCharacter,
+			profile: profile(privateSessionId, { domain: 'finance', constraints: [] }),
+			memories: memories(),
+		});
+	}, /not owned/);
+	assert.doesNotThrow(() =>
+		resolveRagContext({
+			sessionId,
+			userId: USER_ID,
+			currentMessage: 'Demo request',
+			character: { ...FINANCE_CHARACTER, userId: 'runtime-fixture-owner' },
+			profile: profile(sessionId, { domain: 'finance', constraints: [] }),
+			memories: memories(),
+		})
 	);
 	assert.throws(
 		() =>

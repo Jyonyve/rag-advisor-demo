@@ -11,7 +11,14 @@ import {
 	validateServiceId,
 } from '../util/routeHelpers.js';
 import { RESOURCES } from '../db/resource.type.js';
-import { assertOwnedCharacter, getSessionUserId } from '../util/authUtils.js';
+import {
+	assertNotDemoGuest,
+	assertOwnedCharacter,
+	assertReadableCharacter,
+	getSessionUserId,
+} from '../util/authUtils.js';
+import { ApiError } from '@rag-advisor-demo/shared/domain';
+import { isOfficialDemoCharacter } from '../service/officialDemoFixtures.js';
 
 const router: Router = express.Router();
 
@@ -31,6 +38,7 @@ router.get(
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
 		const { characterId } = req.params;
 		validateServiceId(characterId, collectionType);
+		await assertReadableCharacter(req, characterId);
 
 		const response = await historyStore.getHistories(characterId);
 		res.status(200).json(response);
@@ -47,6 +55,7 @@ router.post(
 	genRoutePattern('storeHistory'),
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		await assertNotDemoGuest(req);
 		validateRequestData(req.body, 'body', ['characterId', 'content', 'sequence']);
 		const { characterId, historyId } = req.body;
 		await assertOwnedCharacter(req, characterId);
@@ -71,6 +80,14 @@ router.get(
 		validateServiceId(historyId, collectionType);
 
 		const response = await historyStore.getHistory(historyId);
+		const userId = getSessionUserId(req);
+		const character = await assertReadableCharacter(req, response.historyInfo.characterId);
+		const readableOfficialHistory =
+			isOfficialDemoCharacter(character.characterId) &&
+			response.historyInfo.userId === character.userId;
+		if (response.historyInfo.userId !== userId && !readableOfficialHistory) {
+			throw new ApiError(403, 'History access denied.');
+		}
 		res.status(200).json(response);
 	})
 );

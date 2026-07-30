@@ -1,9 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { LoreResponse, Metadata } from '@rag-advisor-demo/shared/api';
 import { ApiError, LoreInfo } from '@rag-advisor-demo/shared/domain';
 import { loreToMetadata } from '@rag-advisor-demo/shared/util';
 import { getDatabase } from '../db/postgresClient.js';
-import { lores } from '../db/schema.js';
+import { characters, lores } from '../db/schema.js';
 import {
 	deleteMemoryEmbeddings,
 	QueryEmbeddingCache,
@@ -14,6 +14,31 @@ import { loreToDocument } from '../util/documentUtils.js';
 import { RagTraceContext } from '../util/ragTraceUtils.js';
 import { FilterCriteria } from '../util/schemaUtils.js';
 import { parseOfficialLoreMetadata } from '../util/domainValidationUtils.js';
+import { isOfficialDemoCharacter } from '../service/officialDemoFixtures.js';
+
+export const selectLoreOwner = (
+	characterIds: string[],
+	rows: Array<{ characterId: string; userId: string }>,
+	userId: string
+): string => {
+	const uniqueIds = [...new Set(characterIds)];
+	if (!uniqueIds.length || !uniqueIds.every(isOfficialDemoCharacter)) return userId;
+	if (rows.length !== uniqueIds.length) return userId;
+	const rowIds = new Set(rows.map((row) => row.characterId));
+	if (!uniqueIds.every((id) => rowIds.has(id))) return userId;
+	const owners = new Set(rows.map((row) => row.userId));
+	return owners.size === 1 ? rows[0]!.userId : userId;
+};
+
+const resolveLoreOwner = async (characterIds: string[], userId: string): Promise<string> => {
+	const uniqueIds = [...new Set(characterIds)];
+	if (!uniqueIds.length || !uniqueIds.every(isOfficialDemoCharacter)) return userId;
+	const rows = await getDatabase()
+		.select({ characterId: characters.characterId, userId: characters.userId })
+		.from(characters)
+		.where(inArray(characters.characterId, uniqueIds));
+	return selectLoreOwner(uniqueIds, rows, userId);
+};
 
 const emptyResponse = (): LoreResponse => ({
 	ids: [],
@@ -112,22 +137,24 @@ export const loreStore = {
 	},
 
 	getLore: async (loreId: string, userId: string): Promise<LoreResponse> => {
-		const row = await getDatabase().query.lores.findFirst({
-			where: and(eq(lores.loreId, loreId), eq(lores.userId, userId)),
-		});
-		return row ? toResponse([row.data]) : emptyResponse();
+		const row = await getDatabase().query.lores.findFirst({ where: eq(lores.loreId, loreId) });
+		if (!row) return emptyResponse();
+		const effectiveOwner = await resolveLoreOwner(row.data.characterIds, userId);
+		return row.data.userId === effectiveOwner ? toResponse([row.data]) : emptyResponse();
 	},
 
 	getLoresByCharacter: async (characterId: string, userId: string): Promise<LoreResponse> => {
+		const effectiveOwner = await resolveLoreOwner([characterId], userId);
 		const rows = await getDatabase()
 			.select({ data: lores.data })
 			.from(lores)
-			.where(eq(lores.userId, userId));
+			.where(eq(lores.userId, effectiveOwner));
 		return toResponse(
 			rows
 				.map((row) => row.data)
 				.filter(
-					(item) => item.userId === userId && !item.sessionId && item.characterIds.includes(characterId)
+					(item) =>
+						item.userId === effectiveOwner && !item.sessionId && item.characterIds.includes(characterId)
 				)
 		);
 	},
@@ -178,13 +205,15 @@ export const loreStore = {
 		queryEmbeddingCache?: QueryEmbeddingCache,
 		ragTraceContext?: RagTraceContext
 	): Promise<LoreResponse> => {
+		const characterIdList = Array.isArray(characterIds) ? characterIds : [characterIds];
+		const effectiveOwner = await resolveLoreOwner(characterIdList, userId);
 		const rows = await getDatabase()
 			.select({ data: lores.data })
 			.from(lores)
-			.where(eq(lores.userId, userId));
+			.where(eq(lores.userId, effectiveOwner));
 		const candidates = filterLoreCandidates(
 			rows.map((row) => row.data),
-			userId,
+			effectiveOwner,
 			characterIds,
 			sessionId,
 			filterCriteria
@@ -192,7 +221,7 @@ export const loreStore = {
 		if (!candidates.length) return emptyResponse();
 		const results = await searchMemoryEmbeddings(
 			queryTexts,
-			{ sourceType: 'lore', userId, sourceIds: candidates.map((item) => item.loreId) },
+			{ sourceType: 'lore', userId: effectiveOwner, sourceIds: candidates.map((item) => item.loreId) },
 			limit,
 			queryEmbeddingCache,
 			ragTraceContext

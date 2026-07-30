@@ -12,6 +12,7 @@ import {
 	ChatTurn,
 	ApiError,
 	ChatMessageSet,
+	DemoUsageReason,
 } from '@rag-advisor-demo/shared/domain';
 import { createBasicChatTurn, buildTempChatTurnId } from '@rag-advisor-demo/shared/util';
 import { chatStore } from '../store/chatStore.js';
@@ -39,6 +40,8 @@ import { memoryEngine } from './memoryEngine.js';
 import { modelCatalogService } from './modelCatalogService.js';
 import { personaEngine } from './personaEngine.js';
 import { resolveRagContext } from './ragContextService.js';
+import { isDemoGuest } from './demoAccessService.js';
+import { documentStore } from '../store/documentStore.js';
 
 export interface ReceiveBotResponseOptions {
 	adultContentEnabled?: boolean;
@@ -154,6 +157,96 @@ export const receiveBotResponse = async (
 	}
 };
 
+export const buildFallbackText = (
+	reason: DemoUsageReason,
+	context: ReturnType<typeof resolveRagContext>
+): string => {
+	const profile = JSON.stringify(context.sessionProfile, null, 2);
+	const memories = context.memories.longTermHistory.map((turn) => `turn ${turn.sequence}`);
+	const lore = context.memories.relevantLore
+		.slice(0, 3)
+		.map((item) => `${item.title} [${item.loreId}]`);
+	const documents = (context.memories.relevantDocuments ?? []).map(
+		(item) => `${item.title} [${item.documentId}]`
+	);
+	const exclusions = context.evidence.excluded.map(
+		(item) => `${item.sourceKind}: ${item.reason} (${item.count})`
+	);
+	return [
+		`Live generation is unavailable (${reason}). This is a deterministic fallback, not a provider-generated answer.`,
+		`Current request (temporary; not written into the canonical profile):\n${context.currentMessage}`,
+		`Fixed session profile values:\n${profile}`,
+		`Retrieved memories: ${memories.join(', ') || 'none'}`,
+		`Approved official/product documents: ${lore.join('; ') || 'none eligible'}`,
+		`Approved session documents: ${documents.join('; ') || 'none'}`,
+		`Exclusions: ${exclusions.join('; ') || 'none'}`,
+		lore.length
+			? `Bounded sample: review the eligible fictional demo options above against the fixed profile, liquidity needs, horizon, and risk constraints. No live recommendation was generated.`
+			: 'Bounded sample: no approved eligible fixture supports a product-specific recommendation for this request.',
+		context.domain === 'finance' ? FINANCE_DEMO_NOTICE : HEALTHCARE_OPERATIONS_DEMO_NOTICE,
+	].join('\n\n');
+};
+
+export const receiveDemoFallbackResponse = async (
+	tempChatTurnCdo: TempChatTurnCdo,
+	characterInfo: CharacterInfo,
+	profileInfo: ProfileInfo,
+	recentChatTurnString: string,
+	reason: DemoUsageReason,
+	modelName: string
+): Promise<TempChatTurn> => {
+	const userConversation = parseEntriesToConversation(JSON.parse(tempChatTurnCdo.inputJsonString));
+	const recentTurns: ChatTurn[] = JSON.parse(recentChatTurnString);
+	const [loreResponse, documents] = await Promise.all([
+		loreStore.getLoresByCharacter(characterInfo.characterId, tempChatTurnCdo.userId),
+		documentStore.getDocumentsBySession(tempChatTurnCdo.sessionId, tempChatTurnCdo.userId),
+	]);
+	const context = resolveRagContext({
+		sessionId: tempChatTurnCdo.sessionId,
+		userId: tempChatTurnCdo.userId,
+		currentMessage: userConversation,
+		character: characterInfo,
+		profile: profileInfo,
+		memories: {
+			langCode: detectLanguage(userConversation),
+			shortTermHistory: recentTurns,
+			longTermHistory: recentTurns,
+			relevantLore: loreResponse.loreInfos,
+			relevantHistory: [],
+			relevantDocuments: documents,
+			factualRecapSummary: '',
+			relationshipRecapSummary: '',
+		},
+	});
+	const tempTurn = await _getOrCreateTempTurn(
+		tempChatTurnCdo.sessionId,
+		tempChatTurnCdo.sequence,
+		tempChatTurnCdo.userId
+	);
+	const request = buildChatMessage(
+		'user',
+		tempTurn.sequence,
+		profileInfo.showName,
+		userConversation,
+		tempTurn.sessionId
+	);
+	const response = buildChatMessageFromEntries(
+		'assistant',
+		tempTurn.sequence,
+		characterInfo.showName,
+		[{ type: 'dialogue', prompt: buildFallbackText(reason, context) }],
+		tempTurn.sessionId,
+		undefined,
+		modelName
+	);
+	tempTurn.chatTurnSets.push({ request, response, setNo: tempTurn.chatTurnSets.length });
+	tempTurn.setCount = tempTurn.chatTurnSets.length;
+	tempTurn.updatedAt = new Date().toISOString();
+	tempTurn.ragEvidence = context.evidence;
+	await tempStore.saveTempChatTurn(tempTurn);
+	return tempTurn;
+};
+
 /**
  * Finalizes a temporary chat turn by enriching its metadata via LLM and storing it
  * as a permanent ChatTurn in the main chat history.
@@ -191,6 +284,7 @@ export const finalizeChatTurn = async (chatTurnCdo: ChatTurnCdo): Promise<ChatTu
 
 export const enrichChatTurn = async (chatTurnCdo: ChatTurnCdo): Promise<ChatTurn> => {
 	const basicChatTurn: ChatTurn = createBasicChatTurn(chatTurnCdo);
+	if (await isDemoGuest(chatTurnCdo.userId)) return basicChatTurn;
 	const modelInfo = await modelCatalogService.resolveAiModelInfo(basicChatTurn.response.model);
 	return memoryEngine.enrichChatTurnViaLlm(basicChatTurn, { modelInfo });
 };

@@ -197,6 +197,7 @@ async function createServer() {
 	}
 
 	const app = express();
+	if (serverEnv.PUBLIC_DEMO_MODE) app.set('trust proxy', serverEnv.DEMO_TRUST_PROXY_HOPS);
 	const httpServer = createHttpServer(app);
 
 	supertokens.init({

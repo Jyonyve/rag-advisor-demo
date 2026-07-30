@@ -28,6 +28,8 @@ import {
 	assertOwnedCharacter,
 	assertSessionUser,
 	getSessionUserId,
+	assertReadableCharacter,
+	assertNotDemoGuest,
 } from '../util/authUtils.js';
 import { flowLogger, serializeError } from '../util/jsonlLogger.js';
 import { getCharacterImageStorageDir } from '../util/imageStorageUtils.js';
@@ -68,7 +70,7 @@ router.get(
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
 		const { characterId } = req.params;
 		validateServiceId(characterId, collectionType);
-
+		await assertReadableCharacter(req, characterId);
 		const response = await characterStore.getCharacter(characterId);
 		res.status(200).json(response);
 	})
@@ -126,6 +128,7 @@ router.post(
 	genRoutePattern('storeCharacter'),
 	verifySession(),
 	asyncHandler(async (req: Request, res: Response): Promise<void> => {
+		await assertNotDemoGuest(req);
 		const requiredFields = [
 			'title',
 			'contact',
@@ -171,6 +174,9 @@ router.post(
 router.post(
 	genRoutePattern('uploadCharacterImage'),
 	verifySession(),
+	(req, _res, next) => {
+		assertNotDemoGuest(req).then(() => next(), next);
+	},
 	characterUpload.fields([
 		{ name: 'image', maxCount: 1 },
 		{ name: 'avatar', maxCount: 1 },

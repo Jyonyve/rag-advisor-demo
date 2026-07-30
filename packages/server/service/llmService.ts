@@ -27,12 +27,42 @@ import {
 	StructuredOutputValidationError,
 } from '../util/structuredOutputUtils.js';
 import { createGlossaryExtractionSchema, createNerSchema } from '../util/schemaUtils.js';
+import { isDemoGuest } from './demoAccessService.js';
+import { getServerEnv } from '../config/env.js';
 
 interface StructuredOutputRepairOptions {
 	requiredSchema: string;
 	repairModelInfo?: AiModelInfo;
 	signal?: AbortSignal;
 }
+
+class PublicDemoProviderError extends Error {
+	readonly demoReason:
+		| 'PROVIDER_QUOTA'
+		| 'PROVIDER_RATE_LIMIT'
+		| 'PROVIDER_TIMEOUT'
+		| 'PROVIDER_ERROR';
+
+	constructor(demoReason: PublicDemoProviderError['demoReason']) {
+		super('The public demo provider request is unavailable.');
+		this.name = 'PublicDemoProviderError';
+		this.demoReason = demoReason;
+	}
+}
+
+const protectPublicDemoProviderError = async (error: unknown, userId: string): Promise<unknown> => {
+	if (!getServerEnv().PUBLIC_DEMO_MODE || !(await isDemoGuest(userId))) return error;
+	const record = error as { status?: number; code?: string; name?: string } | undefined;
+	if (record?.name === 'AbortError' || record?.code === 'ETIMEDOUT') {
+		return new PublicDemoProviderError('PROVIDER_TIMEOUT');
+	}
+	if (record?.status === 429) {
+		return new PublicDemoProviderError(
+			record.code === 'insufficient_quota' ? 'PROVIDER_QUOTA' : 'PROVIDER_RATE_LIMIT'
+		);
+	}
+	return new PublicDemoProviderError('PROVIDER_ERROR');
+};
 
 const buildModelLogContext = (
 	aiModelInfo: AiModelInfo,
@@ -212,7 +242,10 @@ export const llmService = {
 	 */
 	createLlmInstance: async (aiInfo: AiModelInfo, userId: string) => {
 		const { platform, provider, model, temperature, maxTokens } = aiInfo;
-		const userApiKeys = await credentialStore.getDecryptedUserApiKeys(userId);
+		const demoGuest = getServerEnv().PUBLIC_DEMO_MODE && (await isDemoGuest(userId));
+		const userApiKeys = demoGuest
+			? { openaiApiKey: getServerEnv().OPENAI_API_KEY }
+			: await credentialStore.getDecryptedUserApiKeys(userId);
 
 		if (platform === 'openrouter') {
 			if (!userApiKeys.openrouterApiKey) {
@@ -245,6 +278,7 @@ export const llmService = {
 						model,
 						temperature,
 						maxTokens,
+						reasoningEffort: demoGuest ? getServerEnv().OPENAI_REASONING_EFFORT : undefined,
 						user: userId,
 					});
 				case 'anthropic':
@@ -319,7 +353,11 @@ export const llmService = {
 		zodSchema: ZodType<T>,
 		options?: { signal?: AbortSignal }
 	): Promise<T> => {
-		return invokeStructuredLlmCore(messages, aiModelInfo, userId, zodSchema, options);
+		try {
+			return await invokeStructuredLlmCore(messages, aiModelInfo, userId, zodSchema, options);
+		} catch (error) {
+			throw await protectPublicDemoProviderError(error, userId);
+		}
 	},
 
 	repairStructuredLlmOutput: async <T>(
@@ -370,11 +408,15 @@ export const llmService = {
 			if (error instanceof StructuredOutputValidationError) {
 				throw error;
 			}
+			const protectedError = await protectPublicDemoProviderError(error, userId);
+			const protectedMessage =
+				protectedError instanceof Error ? protectedError.message : 'Unknown LLM error';
 			flowLogger.error('llmService', 'invoke.failed', {
 				...buildModelLogContext(aiModelInfo, userId),
-				error: error.message,
+				error: protectedMessage,
 			});
-			throw new Error(`[llmService] LLM invocation failed: ${error.message}`);
+			if (protectedError instanceof PublicDemoProviderError) throw protectedError;
+			throw new Error(`[llmService] LLM invocation failed: ${protectedMessage}`);
 		}
 	},
 
@@ -389,7 +431,18 @@ export const llmService = {
 		zodSchema: ZodType<T>,
 		options?: { signal?: AbortSignal }
 	): Promise<T> => {
-		return streamStructuredLlmCore(messages, aiModelInfo, userId, onRawDelta, zodSchema, options);
+		try {
+			return await streamStructuredLlmCore(
+				messages,
+				aiModelInfo,
+				userId,
+				onRawDelta,
+				zodSchema,
+				options
+			);
+		} catch (error) {
+			throw await protectPublicDemoProviderError(error, userId);
+		}
 	},
 
 	streamLlm: async (
@@ -426,11 +479,14 @@ export const llmService = {
 			if (error instanceof StructuredOutputValidationError) {
 				throw error;
 			}
-			const message = error instanceof Error ? error.message : 'Unknown streaming error';
+			const protectedError = await protectPublicDemoProviderError(error, userId);
+			const message =
+				protectedError instanceof Error ? protectedError.message : 'Unknown streaming error';
 			flowLogger.error('llmService', 'stream.failed', {
 				...buildModelLogContext(aiModelInfo, userId),
 				error: message,
 			});
+			if (protectedError instanceof PublicDemoProviderError) throw protectedError;
 			throw new Error(`[llmService] LLM streaming failed: ${message}`, { cause: error });
 		}
 	},

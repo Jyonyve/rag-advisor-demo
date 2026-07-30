@@ -29,6 +29,7 @@ interface AuthContextType {
 	createUserProfile: () => Promise<void>;
 	refetchProfile: () => void;
 	isAdmin: boolean;
+	isDemoGuest: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,6 +56,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
 	// 2. Check if user is admin
 	const isAdmin = currentRoles.includes('admin');
+	const isDemoGuest = !session.loading && session.accessTokenPayload?.demoGuest === true;
 
 	// Modal state
 	const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -186,6 +188,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 		createUserProfile,
 		refetchProfile,
 		isAdmin,
+		isDemoGuest,
 	};
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

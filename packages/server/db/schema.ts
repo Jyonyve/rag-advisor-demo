@@ -10,6 +10,7 @@ import {
 	timestamp,
 	uniqueIndex,
 	vector,
+	date,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import {
@@ -55,6 +56,53 @@ export const credentials = pgTable('credentials', {
 	encryptedData: text('encrypted_data').notNull(),
 	...timestamps,
 });
+
+export const demoGuests = pgTable(
+	'demo_guests',
+	{
+		userId: text('user_id')
+			.primaryKey()
+			.references(() => users.userId, { onDelete: 'cascade' }),
+		authRecipeUserId: text('auth_recipe_user_id').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull(),
+		expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'string' }).notNull(),
+	},
+	(table) => [index('demo_guests_expires_at_idx').on(table.expiresAt)]
+);
+
+export const demoGuestAttempts = pgTable(
+	'demo_guest_attempts',
+	{
+		attemptId: text('attempt_id').primaryKey(),
+		clientHash: text('client_hash').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull(),
+	},
+	(table) => [index('demo_guest_attempts_client_created_idx').on(table.clientHash, table.createdAt)]
+);
+
+export const demoGenerationUsage = pgTable(
+	'demo_generation_usage',
+	{
+		usageId: text('usage_id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => demoGuests.userId, { onDelete: 'cascade' }),
+		kind: text('kind').notNull(),
+		status: text('status').notNull(),
+		usageDay: date('usage_day', { mode: 'string' }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull(),
+	},
+	(table) => [
+		index('demo_generation_usage_user_kind_idx').on(table.userId, table.kind, table.status),
+		index('demo_generation_usage_day_kind_idx').on(table.usageDay, table.kind, table.status),
+		check('demo_generation_usage_kind_check', sql`${table.kind} in ('chat', 'report')`),
+		check(
+			'demo_generation_usage_status_check',
+			sql`${table.status} in ('reserved', 'succeeded', 'failed')`
+		),
+	]
+);
 
 export const characters = pgTable(
 	'characters',
@@ -300,6 +348,9 @@ export const memoryEmbeddings = pgTable(
 export type DatabaseSchema = {
 	users: typeof users;
 	credentials: typeof credentials;
+	demoGuests: typeof demoGuests;
+	demoGuestAttempts: typeof demoGuestAttempts;
+	demoGenerationUsage: typeof demoGenerationUsage;
 	characters: typeof characters;
 	sessions: typeof sessions;
 	profiles: typeof profiles;

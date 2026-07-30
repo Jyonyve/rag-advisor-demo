@@ -24,6 +24,7 @@ import {
 } from '../util/domainValidationUtils.js';
 import { filterFinanceLore } from './financeProductFilter.js';
 import { filterHealthcareOperationsLore } from './healthcareOperationsFilter.js';
+import { isOfficialDemoCharacter } from './officialDemoFixtures.js';
 
 export interface ResolveRagContextInput {
 	sessionId: string;
@@ -76,9 +77,14 @@ const getLoreExclusion = (
 	userId: string,
 	sessionId: string,
 	characterId: string,
+	characterOwnerId: string,
 	domain: AssistantDomain
 ): RagExclusionReason | undefined => {
-	if (lore.userId !== userId) return 'ownership_mismatch';
+	const readableOfficialLore =
+		isOfficialDemoCharacter(characterId) && lore.userId === characterOwnerId;
+	if (lore.userId !== userId && !readableOfficialLore) {
+		return 'ownership_mismatch';
+	}
 	if (lore.sessionId && lore.sessionId !== sessionId) return 'session_mismatch';
 	if (!lore.characterIds.includes(characterId)) return 'character_mismatch';
 	if (!lore.domain) return 'missing_domain';
@@ -122,11 +128,12 @@ const filterLores = (
 	userId: string,
 	sessionId: string,
 	characterId: string,
+	characterOwnerId: string,
 	domain: AssistantDomain,
 	exclusions: ExclusionCounter
 ): LoreInfo[] =>
 	lores.filter((lore) => {
-		const reason = getLoreExclusion(lore, userId, sessionId, characterId, domain);
+		const reason = getLoreExclusion(lore, userId, sessionId, characterId, characterOwnerId, domain);
 		if (reason) addExclusion(exclusions, 'character_lore', reason);
 		return !reason;
 	});
@@ -197,7 +204,10 @@ export const resolveRagContext = (input: ResolveRagContextInput): ResolvedRagCon
 	if (parsedSession.characterId !== input.character.characterId) {
 		throw new ApiError(400, 'Session Character does not match the selected Character.');
 	}
-	if (input.character.userId !== input.userId) {
+	if (
+		input.character.userId !== input.userId &&
+		!isOfficialDemoCharacter(input.character.characterId)
+	) {
 		throw new ApiError(403, 'Selected Character is not owned by the authenticated user.');
 	}
 	if (input.profile.userId !== input.userId || input.profile.sessionId !== input.sessionId) {
@@ -222,6 +232,7 @@ export const resolveRagContext = (input: ResolveRagContextInput): ResolvedRagCon
 		input.userId,
 		input.sessionId,
 		input.character.characterId,
+		input.character.userId,
 		domain,
 		exclusions
 	);

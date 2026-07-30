@@ -28,6 +28,7 @@
 		"db:check": "pnpm --filter @rag-advisor-demo/server db:check",
 		"db:migrate": "pnpm --filter @rag-advisor-demo/server db:migrate",
 		"db:studio": "pnpm --filter @rag-advisor-demo/server db:studio",
+		"demo:cleanup": "pnpm --filter @rag-advisor-demo/server demo:cleanup",
 		"db:up": "docker compose up -d postgres supertokens",
 		"db:down": "docker compose down",
 		"smoke:local": "node scripts/smoke-local.mjs",

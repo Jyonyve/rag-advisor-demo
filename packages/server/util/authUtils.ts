@@ -4,6 +4,8 @@ import { ApiError } from '@rag-advisor-demo/shared/domain';
 import { characterStore } from '../store/characterStore.js';
 import { profileStore } from '../store/profileStore.js';
 import { sessionStore } from '../store/sessionStore.js';
+import { isOfficialDemoCharacter } from '../service/officialDemoFixtures.js';
+import { isDemoGuest } from '../service/demoAccessService.js';
 
 type AnyRequest = Request<any, any, any, any>;
 
@@ -37,6 +39,23 @@ export const assertOwnedCharacter = async (req: AnyRequest, characterId: string)
 	const response = await characterStore.getCharacter(characterId);
 	if (response.characterInfo.userId !== userId) {
 		throw new ApiError(403, `Character '${characterId}' is not owned by the authenticated user.`);
+	}
+	return response.characterInfo;
+};
+
+export const assertNotDemoGuest = async (req: AnyRequest): Promise<string> => {
+	const userId = getSessionUserId(req);
+	if (await isDemoGuest(userId)) {
+		throw new ApiError(403, 'This operation is disabled for public demo guests.');
+	}
+	return userId;
+};
+
+export const assertReadableCharacter = async (req: AnyRequest, characterId: string) => {
+	const userId = getSessionUserId(req);
+	const response = await characterStore.getCharacter(characterId);
+	if (response.characterInfo.userId !== userId && !isOfficialDemoCharacter(characterId)) {
+		throw new ApiError(403, `Character '${characterId}' is not available to the authenticated user.`);
 	}
 	return response.characterInfo;
 };

@@ -46,7 +46,11 @@ export const useDocumentApi = () => {
 	const generateFinanceReport = useMutation<DocumentResponse, Error, FinanceReportDraftCreate>({
 		mutationFn: async (input) => {
 			const url = genApiUrl(MODULE_NAMES.DOCUMENT, 'generateFinanceReport');
-			return (await apiClient.post<DocumentResponse>(url, input)).data;
+			const data = (await apiClient.post<DocumentResponse>(url, input)).data;
+			if (data.demoUsage && typeof window !== 'undefined') {
+				window.dispatchEvent(new CustomEvent('demo-usage-updated', { detail: data.demoUsage }));
+			}
+			return data;
 		},
 		onSuccess: (_, input) => invalidateSession(input.sessionId),
 	});

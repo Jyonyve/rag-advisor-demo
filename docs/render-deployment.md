@@ -65,6 +65,24 @@ RAG_ADVISOR_RAG_TRACE=false
 RAG_ADVISOR_DEMO_DISABLE_JSONL_LOGS=1
 DASHBOARD_ADMIN_EMAILS=
 PUBLIC_DEMO_ENABLED=false
+PUBLIC_DEMO_MODE=false
+PUBLIC_LLM_ENABLED=false
+OPENAI_CHAT_MODEL=gpt-5.6-terra
+OPENAI_REPORT_MODEL=gpt-5.6-terra
+OPENAI_REASONING_EFFORT=low
+DEMO_CHAT_LIMIT=5
+DEMO_REPORT_LIMIT=1
+DEMO_CHAT_MAX_OUTPUT_TOKENS=800
+DEMO_REPORT_MAX_OUTPUT_TOKENS=1800
+DEMO_MAX_INPUT_CHARS=1200
+DEMO_GLOBAL_DAILY_CHAT_LIMIT=30
+DEMO_GLOBAL_DAILY_REPORT_LIMIT=6
+DEMO_MAX_CONCURRENT_LLM_REQUESTS=2
+DEMO_LLM_TIMEOUT_MS=45000
+DEMO_GUEST_RETENTION_HOURS=24
+DEMO_GUEST_RATE_LIMIT_MAX=10
+DEMO_GUEST_RATE_LIMIT_WINDOW_MINUTES=60
+DEMO_TRUST_PROXY_HOPS=1
 ```
 
 The local image directory is intentionally ephemeral. The Finance demo must not rely on runtime
@@ -80,9 +98,16 @@ argument, repository file, or screenshot.
 | `DATABASE_URL`                              | Yes                       | Use the dedicated Neon pooled connection URL.                                                     |
 | `SUPERTOKENS_CONNECTION_URI`                | Yes                       | Hosted SuperTokens connection URI.                                                                |
 | `SUPERTOKENS_API_KEY`                       | Yes                       | Hosted SuperTokens API key.                                                                       |
+| `OPENAI_API_KEY`                            | When live demo is enabled | Server-only GPT-5.6 Terra credential for public chat and reports.                                 |
 | `OPENAI_EMBEDDING_API_KEY`                  | Yes for current retrieval | Server-only query and stored-content embeddings. It is never used as a fallback for user chat.    |
 | `EMBEDDING_RATE_LIMIT_MAX_CALLS_PER_MINUTE` | Recommended               | Per-user in-process embedding limit. Use `60` for the public demo.                                |
 | `SECRET_ENCRYPTION_KEY`                     | Yes                       | New public-demo-only random secret of at least 32 bytes; do not reuse the private deployment key. |
+| `DEMO_GUEST_RATE_LIMIT_SECRET`              | When demo mode is enabled | Random server-only HMAC secret; raw visitor IP addresses are never stored.                        |
+
+Before enabling the public buttons, run the reviewed `0003_public_demo_access` migration as a
+one-off operation, redeploy with `PUBLIC_DEMO_MODE=true`, verify fallback mode with
+`PUBLIC_LLM_ENABLED=false`, then set `PUBLIC_LLM_ENABLED=true` only after confirming provider
+budgets and the server-managed OpenAI credential.
 
 ## First deployment checks
 
@@ -93,8 +118,8 @@ argument, repository file, or screenshot.
 4. Open `https://<actual-render-service-domain>/readyz`; expect HTTP 200 and `status: "ready"`. A
    503 means the service cannot perform the read-only Neon check.
 5. Open the home page in a private browser window and confirm there is no hydration error.
-6. Sign up with a dedicated fictional test account and verify login, refresh, logout, password
-   reset routing, and session persistence after a page reload.
+6. In a fresh private window, choose **Try Demo** and verify it creates a distinct authenticated
+   guest without showing an email, password, API key, or model selector.
 7. Confirm browser authentication requests stay on the same Render origin and carry SuperTokens
    cookies.
 8. Create or open only fictional Finance demo data. Verify one retrieval response and one product
