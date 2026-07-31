@@ -32,10 +32,6 @@ import {
 	serializeError,
 } from '../util/jsonlLogger.js';
 import { handleServiceError } from '../util/serviceHelpers.js';
-import {
-	hasFinanceRecommendationIntent,
-	mergeFinanceRecommendationLore,
-} from './financeProductFilter.js';
 import { memoryEngine } from './memoryEngine.js';
 import { modelCatalogService } from './modelCatalogService.js';
 import { personaEngine } from './personaEngine.js';
@@ -404,21 +400,6 @@ async function _generateAndAppendResponse(
 			throw error;
 		}
 	}
-	if (characterInfo.domain === 'finance' && hasFinanceRecommendationIntent(userConversation)) {
-		const characterLore = await loreStore.getLoresByCharacter(
-			characterInfo.characterId,
-			tempTurn.userId
-		);
-		recalledMemories = {
-			...recalledMemories,
-			relevantLore: mergeFinanceRecommendationLore(
-				recalledMemories.relevantLore,
-				characterLore.loreInfos,
-				userConversation
-			),
-		};
-	}
-
 	const resolvedRagContext = resolveRagContext({
 		sessionId: tempTurn.sessionId,
 		userId: tempTurn.userId,

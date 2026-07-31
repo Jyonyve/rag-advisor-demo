@@ -18,6 +18,19 @@ export interface TransformedQuery {
 
 export const MAX_RETRIEVAL_QUERY_TEXTS = 8;
 
+export const buildRetrievalQueryTexts = (
+	userInput: string,
+	translatedInput: string,
+	expandedQueries: readonly string[]
+): string[] =>
+	[
+		...new Set(
+			[userInput, translatedInput, ...expandedQueries]
+				.map((query) => query.trim())
+				.filter((query) => query.length > 0)
+		),
+	].slice(0, MAX_RETRIEVAL_QUERY_TEXTS);
+
 export const ragQueryService = {
 	/**
 	 * Uses the original multilingual query directly when a caller already has an
@@ -70,11 +83,9 @@ export const ragQueryService = {
 			const finalExtraction =
 				extractedData.status === 'fulfilled' ? extractedData.value : ({} as FilterCriteria); // Fallback to empty
 
-			const expandedQueries = ragQueryService
-				._expandQuery(finalExtraction)
-				.slice(0, MAX_RETRIEVAL_QUERY_TEXTS - 1);
+			const expandedQueries = ragQueryService._expandQuery(finalExtraction);
 			const result = {
-				queryTexts: [finalTranslation, ...expandedQueries],
+				queryTexts: buildRetrievalQueryTexts(userInput, finalTranslation, expandedQueries),
 				filterCriteria: finalExtraction,
 				criticalTerm: finalExtraction.criticalTerm,
 				termAliases: termRes.terms.map(({ koreanTerm, englishTerm }) => ({ koreanTerm, englishTerm })),

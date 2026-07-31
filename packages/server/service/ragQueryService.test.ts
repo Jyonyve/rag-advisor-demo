@@ -3,7 +3,11 @@ import { test } from 'node:test';
 import { getAiModelInfo } from '@rag-advisor-demo/shared/util';
 
 import { llmService } from './llmService.js';
-import { MAX_RETRIEVAL_QUERY_TEXTS, ragQueryService } from './ragQueryService.js';
+import {
+	buildRetrievalQueryTexts,
+	MAX_RETRIEVAL_QUERY_TEXTS,
+	ragQueryService,
+} from './ragQueryService.js';
 
 test('retrieval query expansion is deterministic and can be bounded by callers', () => {
 	const expanded = ragQueryService._expandQuery({
@@ -30,6 +34,27 @@ test('direct retrieval preserves one multilingual query without LLM expansion', 
 		queryTexts: ['1년 뒤 이사비로 사용할 자금'],
 		termAliases: [],
 	});
+});
+
+test('transformed retrieval preserves the original multilingual query before translation and expansion', () => {
+	assert.deepEqual(
+		buildRetrievalQueryTexts(
+			'3년 정도 모을 생각인데 예금과 펀드 중 뭐가 나을까요?',
+			'Should I use a deposit or fund for a three-year savings horizon?',
+			['term deposit', 'balanced fund', 'liquidity', 'risk', 'horizon', 'extra', 'ignored']
+		),
+		[
+			'3년 정도 모을 생각인데 예금과 펀드 중 뭐가 나을까요?',
+			'Should I use a deposit or fund for a three-year savings horizon?',
+			'term deposit',
+			'balanced fund',
+			'liquidity',
+			'risk',
+			'horizon',
+			'extra',
+		]
+	);
+	assert.deepEqual(buildRetrievalQueryTexts('같은 질문', '같은 질문', ['같은 질문']), ['같은 질문']);
 });
 
 test('query translation uses the user-selected model', async () => {

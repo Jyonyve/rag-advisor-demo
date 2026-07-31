@@ -26,34 +26,6 @@ const RISK_LEVELS = { low: 0, medium: 1, high: 2 } as const;
 const RISK_PREFERENCES = { conservative: 0, moderate: 1, growth: 2 } as const;
 const LIQUIDITY_LEVELS = { low: 0, medium: 1, high: 2 } as const;
 
-const FINANCE_RECOMMENDATION_INTENT =
-	/(?:추천|가장\s*(?:좋|낫|맞|적합)|어디(?:에|로)?\s*(?:넣|가입|투자)|무엇을?\s*(?:고르|선택)|뭐가\s*(?:좋|낫)|recommend|best\s+(?:product|option)|which\s+(?:product|option)|where\s+should\s+i\s+(?:put|invest|save|open|sign\s*up))/i;
-
-export const hasFinanceRecommendationIntent = (message: string): boolean =>
-	FINANCE_RECOMMENDATION_INTENT.test(message);
-
-export const mergeFinanceRecommendationLore = (
-	retrievedLore: readonly LoreInfo[],
-	characterLore: readonly LoreInfo[],
-	currentMessage: string
-): LoreInfo[] => {
-	if (!hasFinanceRecommendationIntent(currentMessage)) return [...retrievedLore];
-	const merged = new Map(retrievedLore.map((lore) => [lore.loreId, lore]));
-	const catalogLore = characterLore
-		.filter((lore) => {
-			const parsed = financeLoreStructuredMetadataSchema.safeParse(lore.structuredMetadata);
-			return (
-				parsed.success &&
-				(parsed.data.knowledgeType === 'product' || parsed.data.knowledgeType === 'disclosure')
-			);
-		})
-		.sort((left, right) => left.loreId.localeCompare(right.loreId));
-	for (const lore of catalogLore) {
-		if (!merged.has(lore.loreId)) merged.set(lore.loreId, lore);
-	}
-	return [...merged.values()];
-};
-
 const parseNumber = (value: string): number | undefined => {
 	const parsed = Number(value);
 	return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
