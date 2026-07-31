@@ -56,9 +56,24 @@ export const isDemoGuest = async (userId: string): Promise<boolean> => {
 	return Boolean(row);
 };
 
+export const resolveDemoUsageAvailability = (
+	publicLlmEnabled: boolean,
+	hasOpenAiKey: boolean,
+	mode?: DemoUsageStatus['mode'],
+	reason?: DemoUsageReason
+): Pick<DemoUsageStatus, 'liveGenerationEnabled' | 'mode' | 'reason'> => {
+	const liveGenerationEnabled = publicLlmEnabled && hasOpenAiKey;
+	const resolvedReason = reason ?? (!liveGenerationEnabled ? 'LIVE_GENERATION_DISABLED' : undefined);
+	return {
+		liveGenerationEnabled,
+		mode: mode ?? (liveGenerationEnabled ? 'live' : 'fallback'),
+		...(resolvedReason ? { reason: resolvedReason } : {}),
+	};
+};
+
 export const getDemoUsageStatus = async (
 	userId: string,
-	mode: DemoUsageStatus['mode'] = 'live',
+	mode?: DemoUsageStatus['mode'],
 	reason?: DemoUsageReason
 ): Promise<DemoUsageStatus> => {
 	const env = getServerEnv();
@@ -77,9 +92,12 @@ export const getDemoUsageStatus = async (
 			limit: env.DEMO_REPORT_LIMIT,
 			remaining: Math.max(0, env.DEMO_REPORT_LIMIT - reportUsed),
 		},
-		liveGenerationEnabled: env.PUBLIC_LLM_ENABLED && Boolean(env.OPENAI_API_KEY),
-		mode,
-		...(reason ? { reason } : {}),
+		...resolveDemoUsageAvailability(
+			env.PUBLIC_LLM_ENABLED,
+			Boolean(env.OPENAI_API_KEY),
+			mode,
+			reason
+		),
 	};
 };
 

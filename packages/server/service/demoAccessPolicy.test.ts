@@ -4,6 +4,7 @@ import {
 	classifyDemoProviderError,
 	evaluateDemoReservation,
 	getPublicDemoModel,
+	resolveDemoUsageAvailability,
 } from './demoAccessService.js';
 import { buildDemoGuestInitResponse, createInternalGuestCredentials } from './demoGuestService.js';
 import { parseDemoCleanupArgs } from './demoCleanupService.js';
@@ -45,6 +46,23 @@ test('public model policy is fixed with bounded outputs', () => {
 	});
 	assert.equal(getPublicDemoModel('report').model, 'gpt-5.6-terra');
 	assert.equal(getPublicDemoModel('report').maxTokens, 1800);
+});
+
+test('usage status defaults to fallback whenever live generation is unavailable', () => {
+	assert.deepEqual(resolveDemoUsageAvailability(false, false), {
+		liveGenerationEnabled: false,
+		mode: 'fallback',
+		reason: 'LIVE_GENERATION_DISABLED',
+	});
+	assert.deepEqual(resolveDemoUsageAvailability(true, false), {
+		liveGenerationEnabled: false,
+		mode: 'fallback',
+		reason: 'LIVE_GENERATION_DISABLED',
+	});
+	assert.deepEqual(resolveDemoUsageAvailability(true, true), {
+		liveGenerationEnabled: true,
+		mode: 'live',
+	});
 });
 
 test('guest, global, and concurrent limits deny a reservation before provider use', () => {

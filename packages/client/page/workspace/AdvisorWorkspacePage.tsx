@@ -1352,7 +1352,7 @@ export function AdvisorWorkspacePage() {
 				</button>
 				{isDemoGuest && demoUsage ? (
 					<div className="advisor-demo-usage" aria-live="polite">
-						<strong>{lang === 'kor' ? '라이브 데모 사용량' : 'Live demo usage'}</strong>
+						<strong>{lang === 'kor' ? '데모 사용량' : 'Demo usage'}</strong>
 						<span>
 							{lang === 'kor' ? '채팅' : 'Chat'}: {demoUsage.chat.remaining} / {demoUsage.chat.limit}{' '}
 							{lang === 'kor' ? '남음' : 'remaining'}
