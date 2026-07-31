@@ -132,6 +132,13 @@ textarea {
 		var(--advisor-paper);
 }
 
+.advisor-landing,
+.advisor-landing *,
+.advisor-landing *::before,
+.advisor-landing *::after {
+	box-sizing: border-box;
+}
+
 .advisor-landing::before {
 	position: absolute;
 	inset: 0;
@@ -2476,6 +2483,20 @@ textarea {
 	border-top-color: #eccbc6;
 	background: #fae6e2;
 	color: #923c33;
+}
+
+@media (min-width: 901px) {
+	.advisor-landing {
+		height: 100dvh;
+		min-height: 0;
+		grid-template-rows: auto minmax(0, 1fr) auto;
+	}
+
+	.advisor-landing__main {
+		min-height: 0;
+		padding-top: clamp(24px, 5vh, 56px);
+		padding-bottom: clamp(24px, 5vh, 56px);
+	}
 }
 
 @media (max-width: 1100px) {

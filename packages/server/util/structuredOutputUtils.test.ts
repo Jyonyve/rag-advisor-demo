@@ -26,6 +26,15 @@ test('parseStructuredLlmOutput extracts case-insensitive fenced JSON', () => {
 	assert.equal(result.emotion, 'neutral');
 });
 
+test('parseStructuredLlmOutput accepts inline fenced JSON with a serialized closing newline', () => {
+	const result = parseStructuredLlmOutput(
+		'```json {"response":"Hello\\nthere","emotion":"neutral"}\\n```',
+		responseSchema
+	);
+
+	assert.deepEqual(result, { response: 'Hello\nthere', emotion: 'neutral' });
+});
+
 test('parseStructuredLlmOutput rejects schema-invalid JSON and preserves raw output for repair', () => {
 	const rawOutput = '{"response":"Hello","emotion":"angry"}';
 

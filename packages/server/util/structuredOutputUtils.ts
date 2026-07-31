@@ -14,7 +14,12 @@ export class StructuredOutputValidationError extends Error {
 const extractJsonCandidate = (rawOutput: string): string => {
 	const trimmedOutput = rawOutput.trim();
 	const fencedMatch = trimmedOutput.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-	return fencedMatch?.[1]?.trim() || trimmedOutput;
+	const candidate = fencedMatch?.[1]?.trim() || trimmedOutput;
+
+	// Some chat models serialize the newline before a closing Markdown fence as the
+	// two characters "\n". That whitespace is outside the JSON value and is safe to
+	// remove, while escaped newlines inside JSON strings remain untouched.
+	return candidate.replace(/^(?:\\[rnt])+\s*/, '').replace(/\s*(?:\\[rnt])+$/, '');
 };
 
 export const parseStructuredLlmOutput = <T>(rawOutput: string, schema: ZodType<T>): T => {

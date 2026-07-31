@@ -51,6 +51,7 @@ class PublicDemoProviderError extends Error {
 }
 
 const protectPublicDemoProviderError = async (error: unknown, userId: string): Promise<unknown> => {
+	if (error instanceof StructuredOutputValidationError) return error;
 	if (!getServerEnv().PUBLIC_DEMO_MODE || !(await isDemoGuest(userId))) return error;
 	const record = error as { status?: number; code?: string; name?: string } | undefined;
 	if (record?.name === 'AbortError' || record?.code === 'ETIMEDOUT') {
