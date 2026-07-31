@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
 	classifyDemoProviderError,
+	COUNTED_DEMO_GENERATION_STATUSES,
 	evaluateDemoReservation,
 	getPublicDemoModel,
 	resolveDemoUsageAvailability,
@@ -94,6 +95,10 @@ test('guest, global, and concurrent limits deny a reservation before provider us
 		}),
 		'GUEST_LIMIT'
 	);
+});
+
+test('every reserved generation attempt consumes quota regardless of its outcome', () => {
+	assert.deepEqual(COUNTED_DEMO_GENERATION_STATUSES, ['reserved', 'succeeded', 'failed']);
 });
 
 test('provider failures map to typed public fallback reasons', () => {

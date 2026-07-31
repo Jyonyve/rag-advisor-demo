@@ -6,6 +6,7 @@ import { getDatabase } from '../db/postgresClient.js';
 import { demoGenerationUsage, demoGuests } from '../db/schema.js';
 
 export type DemoGenerationKind = 'chat' | 'report';
+export const COUNTED_DEMO_GENERATION_STATUSES = ['reserved', 'succeeded', 'failed'] as const;
 type ReservationResult =
 	| { allowed: true; usageId: string }
 	| { allowed: false; reason: DemoUsageReason };
@@ -33,7 +34,7 @@ const limitsFor = (kind: DemoGenerationKind) => {
 		: { guest: env.DEMO_REPORT_LIMIT, global: env.DEMO_GLOBAL_DAILY_REPORT_LIMIT };
 };
 
-const successfulCount = async (userId: string, kind: DemoGenerationKind) => {
+const attemptCount = async (userId: string, kind: DemoGenerationKind) => {
 	const [row] = await getDatabase()
 		.select({ value: count() })
 		.from(demoGenerationUsage)
@@ -41,7 +42,7 @@ const successfulCount = async (userId: string, kind: DemoGenerationKind) => {
 			and(
 				eq(demoGenerationUsage.userId, userId),
 				eq(demoGenerationUsage.kind, kind),
-				eq(demoGenerationUsage.status, 'succeeded')
+				inArray(demoGenerationUsage.status, [...COUNTED_DEMO_GENERATION_STATUSES])
 			)
 		);
 	return row?.value ?? 0;
@@ -78,8 +79,8 @@ export const getDemoUsageStatus = async (
 ): Promise<DemoUsageStatus> => {
 	const env = getServerEnv();
 	const [chatUsed, reportUsed] = await Promise.all([
-		successfulCount(userId, 'chat'),
-		successfulCount(userId, 'report'),
+		attemptCount(userId, 'chat'),
+		attemptCount(userId, 'report'),
 	]);
 	return {
 		chat: {
@@ -124,7 +125,7 @@ export const reserveDemoGeneration = async (
 				and(eq(demoGenerationUsage.status, 'reserved'), lt(demoGenerationUsage.updatedAt, staleBefore))
 			);
 
-		const activeStatuses = ['reserved', 'succeeded'];
+		const countedStatuses = [...COUNTED_DEMO_GENERATION_STATUSES];
 		const [[guest], [global], [concurrent]] = await Promise.all([
 			tx
 				.select({ value: count() })
@@ -133,7 +134,7 @@ export const reserveDemoGeneration = async (
 					and(
 						eq(demoGenerationUsage.userId, userId),
 						eq(demoGenerationUsage.kind, kind),
-						inArray(demoGenerationUsage.status, activeStatuses)
+						inArray(demoGenerationUsage.status, countedStatuses)
 					)
 				),
 			tx
@@ -143,7 +144,7 @@ export const reserveDemoGeneration = async (
 					and(
 						eq(demoGenerationUsage.usageDay, day),
 						eq(demoGenerationUsage.kind, kind),
-						inArray(demoGenerationUsage.status, activeStatuses)
+						inArray(demoGenerationUsage.status, countedStatuses)
 					)
 				),
 			tx
