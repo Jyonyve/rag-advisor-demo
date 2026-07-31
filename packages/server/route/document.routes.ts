@@ -113,7 +113,7 @@ router.post(
 				});
 			return;
 		}
-		const signal = AbortSignal.timeout(getServerEnv().DEMO_LLM_TIMEOUT_MS);
+		const signal = AbortSignal.timeout(getServerEnv().DEMO_REPORT_LLM_TIMEOUT_MS);
 		try {
 			const document = await financeReportService.generateDraft(input, userId, session, { signal });
 			await finishDemoGeneration(reservation.usageId, 'succeeded');

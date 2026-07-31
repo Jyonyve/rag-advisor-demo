@@ -54,6 +54,7 @@ const serverEnvSchema = z.object({
 	DEMO_GLOBAL_DAILY_REPORT_LIMIT: z.coerce.number().int().min(0).max(100_000).default(6),
 	DEMO_MAX_CONCURRENT_LLM_REQUESTS: z.coerce.number().int().min(1).max(100).default(2),
 	DEMO_LLM_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(45_000),
+	DEMO_REPORT_LLM_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(180_000),
 	DEMO_GUEST_RETENTION_HOURS: z.coerce.number().int().min(1).max(720).default(24),
 	DEMO_GUEST_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(1_000).default(10),
 	DEMO_GUEST_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().min(1).max(1_440).default(60),

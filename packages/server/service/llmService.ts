@@ -117,10 +117,18 @@ const calculateTokenBudget = (
 
 const nativeStructuredOutputProviders = new Set(['openai', 'anthropic', 'google']);
 
-const shouldUseNativeStructuredOutput = (aiModelInfo: AiModelInfo, expectsJson: boolean): boolean =>
+export const shouldUseNativeStructuredOutput = (
+	aiModelInfo: AiModelInfo,
+	expectsJson: boolean,
+	publicDemoOpenAiReasoning = false
+): boolean =>
 	expectsJson &&
 	aiModelInfo.platform === 'direct' &&
-	nativeStructuredOutputProviders.has(aiModelInfo.provider);
+	nativeStructuredOutputProviders.has(aiModelInfo.provider) &&
+	!publicDemoOpenAiReasoning;
+
+export const resolveOpenAiMaxRetries = (demoGuest: boolean): number | undefined =>
+	demoGuest ? 0 : undefined;
 
 const addFormatInstructions = (
 	messages: ChatCompletionMessageParam[],
@@ -156,7 +164,16 @@ const invokeStructuredLlmCore = async <T>(
 	zodSchema: ZodType<T>,
 	options?: { signal?: AbortSignal }
 ): Promise<T> => {
-	const useStructuredOutput = shouldUseNativeStructuredOutput(aiModelInfo, true);
+	const publicDemoOpenAiReasoning =
+		aiModelInfo.platform === 'direct' &&
+		aiModelInfo.provider === 'openai' &&
+		getServerEnv().PUBLIC_DEMO_MODE &&
+		(await isDemoGuest(userId));
+	const useStructuredOutput = shouldUseNativeStructuredOutput(
+		aiModelInfo,
+		true,
+		publicDemoOpenAiReasoning
+	);
 	const requestMessages = useStructuredOutput
 		? messages
 		: addFormatInstructions(messages, zodSchema);
@@ -280,6 +297,7 @@ export const llmService = {
 						temperature,
 						maxTokens,
 						reasoningEffort: demoGuest ? getServerEnv().OPENAI_REASONING_EFFORT : undefined,
+						maxRetries: resolveOpenAiMaxRetries(demoGuest),
 						user: userId,
 					});
 				case 'anthropic':

@@ -5,7 +5,11 @@ import { MODEL_LIMITS_INFO } from '@rag-advisor-demo/shared/config';
 import { SupportAiModelList, type AiModelInfo } from '@rag-advisor-demo/shared/domain';
 import { buildTokenBudget } from '../util/tokenBudgetUtils.js';
 import { z } from 'zod';
-import { llmService } from './llmService.js';
+import {
+	llmService,
+	resolveOpenAiMaxRetries,
+	shouldUseNativeStructuredOutput,
+} from './llmService.js';
 import { StructuredOutputValidationError } from '../util/structuredOutputUtils.js';
 import { flowLogger } from '../util/jsonlLogger.js';
 import { credentialStore } from '../store/credentialStore.js';
@@ -53,6 +57,19 @@ test('selectable model registry contains current metadata and excludes retired m
 	}
 	assert.equal(SupportAiModelList.includes('anthropic/claude-3.7-sonnet'), false);
 	assert.equal(SupportAiModelList.includes('google/gemini-2.0-flash-001'), false);
+});
+
+test('public demo OpenAI reasoning avoids tool-based structured output and provider retries', () => {
+	const model = {
+		...getAiModelInfo('openai/gpt-5.6-terra'),
+		platform: 'direct',
+		provider: 'openai',
+	} as AiModelInfo;
+
+	assert.equal(shouldUseNativeStructuredOutput(model, true, true), false);
+	assert.equal(shouldUseNativeStructuredOutput(model, true, false), true);
+	assert.equal(resolveOpenAiMaxRetries(true), 0);
+	assert.equal(resolveOpenAiMaxRetries(false), undefined);
 });
 
 test('direct OpenAI requires the user key and never falls back to the embedding key', async () => {
