@@ -79,7 +79,11 @@ const formatSessionDate = (value: string, lang: 'kor' | 'eng'): string => {
 	}).format(date);
 };
 
-const WorkspaceLogin = ({ onLogin }: { onLogin: () => void }) => {
+const isPublicDemoMode = (): boolean =>
+	typeof window !== 'undefined' &&
+	(window as Window & { __PUBLIC_DEMO_MODE__?: unknown }).__PUBLIC_DEMO_MODE__ === true;
+
+const WorkspaceLogin = ({ onLogin, showLogin }: { onLogin: () => void; showLogin: boolean }) => {
 	const { lang, toggleLang } = useLanguage();
 	const text = getWorkspaceCopy(lang);
 	const [isStartingDemo, setIsStartingDemo] = useState(false);
@@ -110,9 +114,11 @@ const WorkspaceLogin = ({ onLogin }: { onLogin: () => void }) => {
 					<button className="advisor-language-toggle" type="button" onClick={toggleLang}>
 						{lang === 'kor' ? 'EN · English' : '한 · 한국어'}
 					</button>
-					<button className="advisor-button advisor-button--ghost" type="button" onClick={onLogin}>
-						{text.signIn}
-					</button>
+					{showLogin ? (
+						<button className="advisor-button advisor-button--ghost" type="button" onClick={onLogin}>
+							{text.signIn}
+						</button>
+					) : null}
 				</div>
 			</header>
 			<main className="advisor-landing__main">
@@ -1237,6 +1243,7 @@ export function AdvisorWorkspacePage() {
 		isDemoGuest,
 	} = useAuth();
 	const [selectedDomain, setSelectedDomain] = useState<AssistantDomain>('finance');
+	const publicDemoMode = isPublicDemoMode();
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const sessionQuery = useSessionApi().getSessionsByUserId(userId ?? '');
 	const [demoUsage, setDemoUsage] = useState<DemoUsageStatus>();
@@ -1281,28 +1288,30 @@ export function AdvisorWorkspacePage() {
 	if (!isLoggedIn) {
 		return (
 			<>
-				<WorkspaceLogin onLogin={openLoginModal} />
-				<Dialog
-					open={isLoginModalOpen}
-					onClose={closeLoginModal}
-					maxWidth="xs"
-					fullWidth
-					slotProps={{ paper: { className: 'advisor-auth-dialog' } }}
-				>
-					<Tooltip title={text.closeSignIn}>
-						<IconButton
-							className="advisor-icon-close"
-							onClick={closeLoginModal}
-							aria-label={text.closeSignIn}
-							sx={{ position: 'absolute', right: 10, top: 10, zIndex: 2 }}
-						>
-							<CloseRounded />
-						</IconButton>
-					</Tooltip>
-					<DialogContent>
-						<AuthPage preBuiltUIList={[EmailPasswordPreBuiltUI]} />
-					</DialogContent>
-				</Dialog>
+				<WorkspaceLogin onLogin={openLoginModal} showLogin={!publicDemoMode} />
+				{publicDemoMode ? null : (
+					<Dialog
+						open={isLoginModalOpen}
+						onClose={closeLoginModal}
+						maxWidth="xs"
+						fullWidth
+						slotProps={{ paper: { className: 'advisor-auth-dialog' } }}
+					>
+						<Tooltip title={text.closeSignIn}>
+							<IconButton
+								className="advisor-icon-close"
+								onClick={closeLoginModal}
+								aria-label={text.closeSignIn}
+								sx={{ position: 'absolute', right: 10, top: 10, zIndex: 2 }}
+							>
+								<CloseRounded />
+							</IconButton>
+						</Tooltip>
+						<DialogContent>
+							<AuthPage preBuiltUIList={[EmailPasswordPreBuiltUI]} />
+						</DialogContent>
+					</Dialog>
+				)}
 			</>
 		);
 	}

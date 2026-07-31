@@ -10,6 +10,7 @@ import { parseDemoCleanupArgs } from './demoCleanupService.js';
 import { isOfficialDemoCharacter } from './officialDemoFixtures.js';
 import { buildFallbackText } from './orchestrationService.js';
 import { selectLoreOwner } from '../store/loreStore.js';
+import { renderClientShell } from '../util/clientShellUtils.js';
 
 test('two guest initializations produce distinct internal identities', () => {
 	const first = createInternalGuestCredentials();
@@ -140,4 +141,15 @@ test('cleanup defaults dry and execute requires one explicit flag', () => {
 		hours: 48,
 	});
 	assert.throws(() => parseDemoCleanupArgs(['--execute', '--dry-run']));
+});
+
+test('client shell exposes only non-secret public runtime configuration', () => {
+	const html = renderClientShell(
+		'<html><!--emotion-styles--><body><!--app-html--><!--server-data--></body></html>',
+		'eng',
+		true
+	);
+	assert.match(html, /window\.__INITIAL_LANG__="eng"/);
+	assert.match(html, /window\.__PUBLIC_DEMO_MODE__=true/);
+	assert.doesNotMatch(html, /<!--(?:app-html|emotion-styles|server-data)-->/);
 });

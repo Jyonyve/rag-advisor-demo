@@ -21,7 +21,6 @@ import {
 } from 'supertokens-node/framework/express';
 
 import cors from 'cors';
-import sirv from 'sirv';
 import { sql } from 'drizzle-orm';
 
 import characterRoutes from './route/character.routes.js';
@@ -49,6 +48,7 @@ import { getDatabase } from './db/postgresClient.js';
 import { flowLogger, serializeError } from './util/jsonlLogger.js';
 import { apiRequestLogger } from './util/routeHelpers.js';
 import { ensureLocalImageStorageRoot } from './util/imageStorageUtils.js';
+import { renderClientShell } from './util/clientShellUtils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url)); // src/server
 const serverEnv = getServerEnv();
@@ -322,16 +322,10 @@ async function createServer() {
 		app.use(vite.middlewares);
 		flowLogger.info('server', 'vite.middleware.attached');
 	} else {
-		// Production optimizations
-		const serveOptions = {
-			dev: false,
-			immutable: true,
-			maxAge: 31536000,
-			// Add compression
-			gzip: true,
-			brotli: true,
-		};
-		app.use(BASE, sirv(resolve('dist/client'), serveOptions));
+		app.use(
+			BASE,
+			express.static(resolve('dist/client'), { index: false, immutable: true, maxAge: '1y' })
+		);
 	}
 
 	// --- API Routes ---
@@ -367,10 +361,11 @@ async function createServer() {
 
 			const detectedLang = res.locals.detectedLang || 'eng';
 
-			const finalHtml = template
-				.replace(`<!--app-html-->`, '')
-				.replace(`<!--emotion-styles-->`, '')
-				.replace(`<!--server-data-->`, `<script>window.__INITIAL_LANG__="${detectedLang}"</script>`);
+			const finalHtml = renderClientShell(
+				template,
+				detectedLang === 'kor' ? 'kor' : 'eng',
+				serverEnv.PUBLIC_DEMO_MODE
+			);
 
 			res.status(200).set({ 'Content-Type': 'text/html' }).end(finalHtml);
 		} catch (error) {
@@ -382,13 +377,13 @@ async function createServer() {
 		}
 	});
 
-	// --- SSR Catch-all Handler ---
+	// The application intentionally mounts routes only after browser hydration. Serving the same
+	// shell for client routes avoids running an unnecessary production SSR bundle and keeps direct
+	// navigation consistent with the root route.
 	app.get('/{*splat}', async (req: Request, res: Response, next: NextFunction) => {
-		// Skip SSR for API routes
 		if (req.originalUrl.startsWith(`${BASE_API}`) || req.originalUrl.startsWith(`/${AUTH_PATH}`)) {
 			return next();
 		}
-		// Optional: Skip potential static files (basic check)
 		const fileExtension = path.extname(req.originalUrl);
 		if (
 			[
@@ -411,47 +406,27 @@ async function createServer() {
 			return next();
 		}
 
-		flowLogger.info('server', 'ssr.render.start', { path: req.originalUrl });
+		flowLogger.info('server', 'clientShell.render.start', { path: req.originalUrl });
 
 		try {
 			let template: string;
-			// Type for the render function from entry-server (adjust if render signature changes)
-			let render: (url: string, initialLang: LangCode) => { html: string; emotionStyleTags: string };
-
 			const detectedLang: LangCode = res.locals.detectedLang === 'kor' ? 'kor' : 'eng';
 
 			if (!isProduction && vite) {
-				// DEVELOPMENT
 				template = await fs.readFile(templateDevHtmlFile, 'utf-8');
 				template = await vite.transformIndexHtml(req.originalUrl, template);
-				const serverEntry = await vite.ssrLoadModule('/entry-server.tsx');
-				render = serverEntry.render;
 			} else {
-				// PRODUCTION
 				template = await fs.readFile(templateProdHtmlBuilt, 'utf-8');
-				const serverEntryPath = resolve('packages/client/dist/ssr/entry-server.js');
-				const serverEntry = await import(serverEntryPath);
-				render = serverEntry.render;
 			}
 
-			// --- Render the React application ---
-			// Call the render function from entry-server (NO Helmet context needed now)
-			const { html: appHtml, emotionStyleTags } = render(req.originalUrl, detectedLang);
+			const finalHtml = renderClientShell(template, detectedLang, serverEnv.PUBLIC_DEMO_MODE);
 
-			// 🎯 INJECT LANGUAGE DATA VIA HTML TEMPLATE
-			const finalHtml = template
-				.replace(`<!--app-html-->`, appHtml)
-				.replace(`<!--emotion-styles-->`, emotionStyleTags)
-				.replace(`<!--server-data-->`, `<script>window.__INITIAL_LANG__="${detectedLang}"</script>`);
-
-			// --- Send the final HTML response ---
 			res.status(200).set({ 'Content-Type': 'text/html' }).end(finalHtml);
 		} catch (e: any) {
-			if (vite) {
-				// Let Vite fix stack trace in dev
-				vite.ssrFixStacktrace(e);
-			}
-			flowLogger.error('server', 'ssr.render.failed', { path: req.originalUrl, ...serializeError(e) });
+			flowLogger.error('server', 'clientShell.render.failed', {
+				path: req.originalUrl,
+				...serializeError(e),
+			});
 			next(e); // Pass error to default handler
 		}
 	});
