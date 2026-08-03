@@ -32,6 +32,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { EmailPasswordPreBuiltUI } from 'supertokens-auth-react/recipe/emailpassword/prebuiltui.js';
 import { AuthPage } from 'supertokens-auth-react/ui/index.js';
+import { isPublicDemoMode } from '../../util/publicDemoUtils.js';
 
 import {
 	useCharacterApi,
@@ -78,10 +79,6 @@ const formatSessionDate = (value: string, lang: 'kor' | 'eng'): string => {
 		day: 'numeric',
 	}).format(date);
 };
-
-const isPublicDemoMode = (): boolean =>
-	typeof window !== 'undefined' &&
-	(window as Window & { __PUBLIC_DEMO_MODE__?: unknown }).__PUBLIC_DEMO_MODE__ === true;
 
 const WorkspaceLogin = ({ onLogin, showLogin }: { onLogin: () => void; showLogin: boolean }) => {
 	const { lang, toggleLang } = useLanguage();

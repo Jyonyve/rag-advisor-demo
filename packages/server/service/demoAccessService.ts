@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, count, eq, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, count, eq, gte, inArray, lt, or, sql } from 'drizzle-orm';
 import type { DemoUsageReason, DemoUsageStatus } from '@rag-advisor-demo/shared/domain';
 import { getServerEnv } from '../config/env.js';
 import { getDatabase } from '../db/postgresClient.js';
@@ -7,6 +7,7 @@ import { demoGenerationUsage, demoGuests } from '../db/schema.js';
 
 export type DemoGenerationKind = 'chat' | 'report';
 export const COUNTED_DEMO_GENERATION_STATUSES = ['reserved', 'succeeded', 'failed'] as const;
+type DemoReservationTimeouts = { chatMs: number; reportMs: number };
 type ReservationResult =
 	| { allowed: true; usageId: string }
 	| { allowed: false; reason: DemoUsageReason };
@@ -26,6 +27,15 @@ export const evaluateDemoReservation = (input: {
 };
 
 const utcDay = (date = new Date()): string => date.toISOString().slice(0, 10);
+
+export const resolveDemoReservationStaleBefore = (
+	kind: DemoGenerationKind,
+	now: Date,
+	timeouts: DemoReservationTimeouts
+): string => {
+	const timeoutMs = kind === 'chat' ? timeouts.chatMs : timeouts.reportMs;
+	return new Date(now.getTime() - timeoutMs * 2).toISOString();
+};
 
 const limitsFor = (kind: DemoGenerationKind) => {
 	const env = getServerEnv();
@@ -113,7 +123,9 @@ export const reserveDemoGeneration = async (
 	}
 	const limits = limitsFor(kind);
 	const day = utcDay(now);
-	const staleBefore = new Date(now.getTime() - env.DEMO_LLM_TIMEOUT_MS * 2).toISOString();
+	const timeouts = { chatMs: env.DEMO_LLM_TIMEOUT_MS, reportMs: env.DEMO_REPORT_LLM_TIMEOUT_MS };
+	const chatStaleBefore = resolveDemoReservationStaleBefore('chat', now, timeouts);
+	const reportStaleBefore = resolveDemoReservationStaleBefore('report', now, timeouts);
 	const timestamp = now.toISOString();
 
 	return getDatabase().transaction(async (tx) => {
@@ -122,7 +134,16 @@ export const reserveDemoGeneration = async (
 			.update(demoGenerationUsage)
 			.set({ status: 'failed', updatedAt: timestamp })
 			.where(
-				and(eq(demoGenerationUsage.status, 'reserved'), lt(demoGenerationUsage.updatedAt, staleBefore))
+				and(
+					eq(demoGenerationUsage.status, 'reserved'),
+					or(
+						and(eq(demoGenerationUsage.kind, 'chat'), lt(demoGenerationUsage.updatedAt, chatStaleBefore)),
+						and(
+							eq(demoGenerationUsage.kind, 'report'),
+							lt(demoGenerationUsage.updatedAt, reportStaleBefore)
+						)
+					)
+				)
 			);
 
 		const countedStatuses = [...COUNTED_DEMO_GENERATION_STATUSES];
@@ -153,7 +174,16 @@ export const reserveDemoGeneration = async (
 				.where(
 					and(
 						eq(demoGenerationUsage.status, 'reserved'),
-						gte(demoGenerationUsage.updatedAt, staleBefore)
+						or(
+							and(
+								eq(demoGenerationUsage.kind, 'chat'),
+								gte(demoGenerationUsage.updatedAt, chatStaleBefore)
+							),
+							and(
+								eq(demoGenerationUsage.kind, 'report'),
+								gte(demoGenerationUsage.updatedAt, reportStaleBefore)
+							)
+						)
 					)
 				),
 		]);

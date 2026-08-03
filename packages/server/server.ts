@@ -49,6 +49,7 @@ import { flowLogger, serializeError } from './util/jsonlLogger.js';
 import { apiRequestLogger } from './util/routeHelpers.js';
 import { ensureLocalImageStorageRoot } from './util/imageStorageUtils.js';
 import { renderClientShell } from './util/clientShellUtils.js';
+import { getPublicSignupDenial } from './util/publicSignupPolicy.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url)); // src/server
 const serverEnv = getServerEnv();
@@ -221,6 +222,9 @@ async function createServer() {
 					apis: (originalImplementation) => ({
 						...originalImplementation,
 						signUpPOST: async function (input) {
+							const signupDenial = getPublicSignupDenial(serverEnv.PUBLIC_DEMO_MODE);
+							if (signupDenial) return signupDenial;
+
 							if (!originalImplementation.signUpPOST) {
 								throw new Error('signUpPOST is not available');
 							}

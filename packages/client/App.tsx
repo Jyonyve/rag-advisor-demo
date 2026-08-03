@@ -7,6 +7,7 @@ import { getSuperTokensRoutesForReactRouterDom } from 'supertokens-auth-react/ui
 import { AdvisorWorkspacePage } from './page/workspace/index.js';
 import { useToast } from './provider/ToastProvider.jsx';
 import { setupApiClient } from './util/clientApiHelpers.js';
+import { isPublicDemoMode } from './util/publicDemoUtils.js';
 
 function WorkspaceFallbackRedirect() {
 	const navigate = useNavigate();
@@ -21,6 +22,7 @@ function WorkspaceFallbackRedirect() {
 export function App() {
 	const { addToast } = useToast();
 	const [hasMounted, setHasMounted] = useState(false);
+	const publicDemoMode = isPublicDemoMode();
 
 	useEffect(() => {
 		setHasMounted(true);
@@ -38,7 +40,9 @@ export function App() {
 			<Route index element={<AdvisorWorkspacePage />} />
 			<Route path="workspace" element={<AdvisorWorkspacePage />} />
 			<Route path="workspace/:sessionId" element={<AdvisorWorkspacePage />} />
-			{getSuperTokensRoutesForReactRouterDom(reactRouter, [EmailPasswordPreBuiltUI])}
+			{publicDemoMode
+				? null
+				: getSuperTokensRoutesForReactRouterDom(reactRouter, [EmailPasswordPreBuiltUI])}
 			<Route path="*" element={<WorkspaceFallbackRedirect />} />
 		</Routes>
 	);

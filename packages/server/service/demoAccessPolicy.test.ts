@@ -6,6 +6,7 @@ import {
 	evaluateDemoReservation,
 	getPublicDemoModel,
 	resolveDemoUsageAvailability,
+	resolveDemoReservationStaleBefore,
 } from './demoAccessService.js';
 import { buildDemoGuestInitResponse, createInternalGuestCredentials } from './demoGuestService.js';
 import { parseDemoCleanupArgs } from './demoCleanupService.js';
@@ -99,6 +100,17 @@ test('guest, global, and concurrent limits deny a reservation before provider us
 
 test('every reserved generation attempt consumes quota regardless of its outcome', () => {
 	assert.deepEqual(COUNTED_DEMO_GENERATION_STATUSES, ['reserved', 'succeeded', 'failed']);
+});
+
+test('report reservations use the longer report timeout before becoming stale', () => {
+	const now = new Date('2026-08-03T12:00:00.000Z');
+	const timeouts = { chatMs: 45_000, reportMs: 180_000 };
+
+	assert.equal(resolveDemoReservationStaleBefore('chat', now, timeouts), '2026-08-03T11:58:30.000Z');
+	assert.equal(
+		resolveDemoReservationStaleBefore('report', now, timeouts),
+		'2026-08-03T11:54:00.000Z'
+	);
 });
 
 test('provider failures map to typed public fallback reasons', () => {
