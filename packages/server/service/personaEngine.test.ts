@@ -6,10 +6,12 @@ import { METADATA_TYPES } from '@rag-advisor-demo/shared/config';
 import type { ProfileInfo } from '@rag-advisor-demo/shared/domain';
 import { buildSessionId } from '@rag-advisor-demo/shared/util';
 import {
+	buildDomainResponseEntries,
 	ensureDomainDemoDisclaimer,
 	FINANCE_DEMO_NOTICE,
 	FINANCE_DEMO_NOTICE_KO,
 	HEALTHCARE_OPERATIONS_DEMO_NOTICE,
+	HEALTHCARE_OPERATIONS_DEMO_NOTICE_KO,
 } from './orchestrationService.js';
 
 import { DEMO_CHARACTER_FIXTURES } from '../fixture/domainFixtures.js';
@@ -49,6 +51,26 @@ test('finance chat responses receive a deterministic demo disclaimer when omitte
 	assert.equal(
 		ensureDomainDemoDisclaimer('This is not medical advice.', { domain: 'healthcare_operations' }),
 		'This is not medical advice.'
+	);
+	assert.equal(
+		ensureDomainDemoDisclaimer('행정 절차를 안내해 드릴게요.', { domain: 'healthcare_operations' }),
+		`행정 절차를 안내해 드릴게요.\n\n${HEALTHCARE_OPERATIONS_DEMO_NOTICE_KO}`
+	);
+	assert.equal(
+		ensureDomainDemoDisclaimer('이 내용은 의료 조언이 아닙니다.', {
+			domain: 'healthcare_operations',
+		}),
+		'이 내용은 의료 조언이 아닙니다.'
+	);
+});
+
+test('healthcare responses bypass the legacy dialogue and action parser', () => {
+	assert.deepEqual(
+		buildDomainResponseEntries(
+			'첫 단계입니다.\n\n"담당 부서에 전달하세요."',
+			'healthcare_operations'
+		),
+		[{ type: 'dialogue', prompt: '첫 단계입니다.\n\n"담당 부서에 전달하세요."' }]
 	);
 });
 const profile: ProfileInfo = {
@@ -178,6 +200,11 @@ test('healthcare operations persona messages contain canonical workflow evidence
 
 	assert.match(prompt, /not medical advice/i);
 	assert.match(prompt, /administrative workflow assistant/i);
+	assert.match(prompt, /application footer already identifies/i);
+	assert.match(prompt, /Do not repeat the general demonstration-data or non-advice notice/i);
+	assert.match(prompt, /Never use the words "fictional", "demo", "가상", or "데모"/i);
+	assert.match(prompt, /short sections or numbered steps/i);
+	assert.match(prompt, /plain language in the user's language/i);
 	assert.match(prompt, new RegExp(billing.loreId));
 	assert.match(prompt, /Canonical body:/);
 	assert.match(prompt, /requester-role/i);

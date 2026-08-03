@@ -13,8 +13,10 @@ import {
 	countEvidenceKinds,
 	getSessionDomain,
 	getSessionDisplayTitle,
+	getWorkspaceEvidenceLabel,
 	summarizeDomainProfile,
 	stripFinanceAnswerNotices,
+	stripHealthcareAnswerNotices,
 } from './workspaceConfig.js';
 import {
 	omitDuplicateLeadingReportTitle,
@@ -248,6 +250,34 @@ test('finance chat rendering removes repeated demo notices while preserving the 
 	assert.equal(
 		stripFinanceAnswerNotices('원금 손실 가능성이 있는 가상 상품입니다.'),
 		'원금 손실 가능성이 있는 가상 상품입니다.'
+	);
+});
+
+test('healthcare chat rendering removes Korean and English footer notices', () => {
+	assert.equal(
+		stripHealthcareAnswerNotices(
+			'접수 내용을 확인하세요.\n\n기관과 절차는 가상 데모 데이터이며, 의료 조언이 아닙니다.\n\n담당 부서로 전달하세요.'
+		),
+		'접수 내용을 확인하세요.\n\n담당 부서로 전달하세요.'
+	);
+	assert.equal(
+		stripHealthcareAnswerNotices(
+			'Check the request.\n\nThis fictional workflow is demo data and not medical advice.'
+		),
+		'Check the request.'
+	);
+});
+
+test('healthcare evidence labels are clean and localized in the workspace', () => {
+	const item = {
+		sourceId: 'northstar-admission-discharge-administration_demo-lore',
+		label: 'DEMO — Northstar Admission and Discharge Administration',
+	};
+	assert.equal(getWorkspaceEvidenceLabel(item, 'kor'), '입원·퇴원 행정 절차');
+	assert.equal(getWorkspaceEvidenceLabel(item, 'eng'), 'Admission and discharge administration');
+	assert.equal(
+		getWorkspaceEvidenceLabel({ sourceId: 'other', label: 'DEMO — Other source' }, 'eng'),
+		'Other source'
 	);
 });
 

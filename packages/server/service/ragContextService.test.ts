@@ -288,7 +288,7 @@ test('applies role-aware healthcare workflow filters through the shared resolver
 				sourceId === 'northstar-admission-discharge-administration_demo-lore' &&
 				decision === 'excluded' &&
 				reasons.includes('workflow_topic_mismatch') &&
-				reasons.includes('requester_role_mismatch')
+				!reasons.includes('requester_role_mismatch')
 		)
 	);
 	assert.ok(

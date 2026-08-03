@@ -29,8 +29,13 @@ export const HEALTHCARE_OPERATIONS_FIXTURES = deepFreeze([
 			category: 'Technology',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content:
-				'DEMO DATA ONLY. At fictional Northstar Demo Hospital, a requester verifies the demo encounter reference and preferred date, checks department availability, records the reason as an administrative note, and confirms both appointment and examination changes with the scheduling desk. Time-sensitive requests are escalated to the scheduling supervisor; this workflow does not assess symptoms or clinical urgency. This is fictional operational guidance, not medical advice.',
+			content: `DEMO DATA ONLY. Northstar Demo Hospital uses this administrative scheduling workflow:
+1. Intake: record the demo encounter reference, requested appointment or examination, preferred date range, contact channel, and whether linked bookings must move together.
+2. Verify scope: confirm the requester is authorized to discuss scheduling and avoid collecting symptoms or unnecessary personal details.
+3. Check dependencies: review department availability, preparation windows, linked examinations, and any existing administrative holds.
+4. Coordinate: send the proposed change to the scheduling desk and obtain confirmation before treating the booking as changed.
+5. Close: record the administrative reason, old and new time, responsible desk, confirmation channel, and any unresolved dependency.
+Time-sensitive administrative requests go to the scheduling supervisor. Possible clinical urgency is outside this workflow and must be handed to qualified clinical staff rather than assessed by the requester.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
 			keywordList: ['appointment change', 'examination rescheduling', 'scheduling desk'],
 			topicList: ['fictional healthcare administration'],
@@ -64,8 +69,18 @@ export const HEALTHCARE_OPERATIONS_FIXTURES = deepFreeze([
 			category: 'Other',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content:
-				'DEMO DATA ONLY. At fictional Northstar Demo Hospital, authorized staff confirm the demo encounter identifier, required administrative forms, responsible department, billing handoff, and document-delivery preference. Clinical discharge decisions and treatment instructions are outside this workflow and must remain with qualified clinical staff. This is fictional operational guidance, not medical advice.',
+			content: `DEMO DATA ONLY. Northstar Demo Hospital separates admission and discharge administration from clinical decisions.
+Admission coordination:
+1. Confirm the demo encounter identifier, responsible department, requester role, and planned admission date.
+2. Check that required administrative forms are present and route incomplete items to the owning administrative desk.
+3. Record the billing handoff status and the patient's selected document-delivery and contact preferences.
+4. Confirm completion with the receiving department and record any unresolved administrative dependency.
+Discharge coordination:
+1. Begin only after qualified clinical staff record the discharge decision; administrative staff never make that decision.
+2. Confirm the encounter identifier, responsible department, required administrative documents, billing handoff, and delivery preference.
+3. Route missing documents to their owner, record expected completion, and avoid inventing treatment instructions or clinical clearance.
+4. Close the administrative checklist only when each handoff has an owner and status; escalate time-sensitive gaps to the operations supervisor.
+Patient-support staff may explain status and coordinate the documented handoffs, but may not approve admission, discharge, treatment, or clinical instructions.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
 			keywordList: ['admission administration', 'discharge administration', 'forms'],
 			topicList: ['fictional healthcare administration'],
@@ -80,7 +95,7 @@ export const HEALTHCARE_OPERATIONS_FIXTURES = deepFreeze([
 				knowledgeType: 'workflow',
 				workflowCode: 'DEMO-OPS-ADMIT-205',
 				workflowTopic: 'admission_discharge',
-				allowedRequesterRoles: ['nurse', 'doctor', 'admin_staff'],
+				allowedRequesterRoles: ['nurse', 'doctor', 'admin_staff', 'patient_support'],
 				urgencyLevels: ['routine', 'time_sensitive'],
 			},
 		},
@@ -100,8 +115,14 @@ export const HEALTHCARE_OPERATIONS_FIXTURES = deepFreeze([
 			category: 'Politics',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content:
-				'DEMO DATA ONLY. At fictional Northstar Demo Hospital, record-copy and correction requests require the demo request form, identity-verification status, authorization scope, requested record category, delivery channel, and an audit entry. Staff must not disclose record content beyond the verified scope. This fixture contains no personal or patient information and is not a substitute for an applicable privacy policy.',
+			content: `DEMO DATA ONLY. Northstar Demo Hospital uses this record-copy and correction-request workflow:
+1. Intake: capture the demo request reference, request type, requested record category and date range, and preferred delivery channel.
+2. Verify: record identity-verification status and the authorization scope without copying unnecessary identity data into free text.
+3. Scope: compare the requested material with the verified authorization and pause any item outside that scope.
+4. Route: send copy requests to records fulfillment and correction requests to the record-owning department; do not alter source records in the support workflow.
+5. Audit: record who accepted the request, the route, status, delivery channel, and each disclosure decision.
+6. Escalate: send ambiguous authority, privacy complaints, or time-sensitive exceptions to the privacy lead.
+Staff must not disclose content beyond the verified scope or promise that a requested correction will be accepted.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
 			keywordList: ['record copy', 'privacy access', 'correction request'],
 			topicList: ['fictional healthcare privacy administration'],
@@ -135,8 +156,14 @@ export const HEALTHCARE_OPERATIONS_FIXTURES = deepFreeze([
 			category: 'Other',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content:
-				'DEMO DATA ONLY. At fictional Northstar Demo Hospital, patient-support or administrative staff verify the demo invoice reference, categorize the question, attach the disputed fictional line item, and route it to the billing desk. Staff may explain workflow status but must not invent coverage, prices, refunds, or clinical justifications. This is fictional administrative guidance.',
+			content: `DEMO DATA ONLY. Northstar Demo Hospital uses this billing-inquiry workflow:
+1. Intake: confirm the demo invoice reference, requester contact channel, and whether the question concerns a payment status, invoice copy, line item, or disputed charge.
+2. Verify: confirm the requester is authorized to discuss the invoice and avoid collecting payment-card or unnecessary personal data in notes.
+3. Document: identify the questioned line item, amount shown on the demo invoice, service date shown, and the requester's stated reason without changing the source invoice.
+4. Route: send invoice-copy and payment-status requests to billing support; send disputed line items to billing review with the relevant line attached.
+5. Communicate: provide the ticket reference, owning desk, current status, and next update point.
+6. Close or escalate: close only after the billing desk records an outcome; escalate duplicate charges, unresolved ownership, or missed update commitments to the billing supervisor.
+Patient-support staff may explain process and status but must not invent coverage, prices, refunds, or clinical justification.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
 			keywordList: ['billing inquiry', 'invoice question', 'billing desk'],
 			topicList: ['fictional healthcare billing administration'],
@@ -170,8 +197,14 @@ export const HEALTHCARE_OPERATIONS_FIXTURES = deepFreeze([
 			category: 'Technology',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content:
-				'DEMO DATA ONLY. At fictional Northstar Demo Hospital, HIS access support verifies the demo staff reference, requester role, requested module, supervisor approval status, and least-privilege access scope before routing the ticket. Passwords, access tokens, and personal staff details must never be entered into the ticket. Time-sensitive access issues follow the fictional service-desk escalation path.',
+			content: `DEMO DATA ONLY. Northstar Demo Hospital uses this HIS access-support workflow:
+1. Intake: record the demo staff reference, requester role, requested module, business task, access type, and requested duration.
+2. Verify approval: confirm the named supervisor and approval status; support staff do not approve their own request.
+3. Minimize scope: compare the request with the role template and route only the least-privilege access needed for the stated task.
+4. Route: send new or changed access to identity administration; send login failures for existing access to the service desk.
+5. Protect secrets: never place passwords, recovery codes, access tokens, or unnecessary personal staff details in the ticket.
+6. Confirm and audit: record the owning team, ticket reference, granted scope or rejection reason, expiry when temporary, and requester notification.
+Time-sensitive access failures follow the service-desk escalation path. Suspected unauthorized access is escalated to security and is not resolved by granting broader permissions.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
 			keywordList: ['HIS access', 'role permission', 'service desk'],
 			topicList: ['fictional healthcare information system'],

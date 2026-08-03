@@ -3,6 +3,7 @@ import type {
 	DomainSessionProfile,
 	ProfileCdo,
 	RagEvidenceDto,
+	RagEvidenceItem,
 	SessionInfo,
 } from '@rag-advisor-demo/shared/domain';
 import type { LangCode } from '@rag-advisor-demo/shared/config';
@@ -102,6 +103,50 @@ export const stripFinanceAnswerNotices = (value: string): string =>
 		.filter((paragraph) => !isFinanceAnswerNotice(paragraph))
 		.join('\n\n')
 		.trim();
+
+const isHealthcareAnswerNotice = (paragraph: string): boolean => {
+	const normalized = paragraph.replace(/\s+/g, ' ').trim();
+	const hasDemoMarker = /(?:fictional|demo|가상|데모)/i.test(normalized);
+	const hasAdviceNotice = /(?:not medical advice|의료\s*(?:조언|자문)이\s*아닙니다)/i.test(
+		normalized
+	);
+	return hasDemoMarker && hasAdviceNotice;
+};
+
+export const stripHealthcareAnswerNotices = (value: string): string =>
+	value
+		.replace(/\r\n|\r/g, '\n')
+		.split(/\n{2,}/)
+		.filter((paragraph) => !isHealthcareAnswerNotice(paragraph))
+		.join('\n\n')
+		.trim();
+
+const HEALTHCARE_EVIDENCE_LABELS: Record<string, { eng: string; kor: string }> = {
+	'healthcare-operations-assistant-core_demo-lore': {
+		eng: 'Healthcare operations guidance',
+		kor: '의료 운영 일반 안내',
+	},
+	'northstar-appointment-rescheduling_demo-lore': {
+		eng: 'Appointment and examination rescheduling',
+		kor: '예약 및 검사 일정 변경',
+	},
+	'northstar-admission-discharge-administration_demo-lore': {
+		eng: 'Admission and discharge administration',
+		kor: '입원·퇴원 행정 절차',
+	},
+	'northstar-record-copy-and-privacy_demo-lore': {
+		eng: 'Record copy and privacy procedure',
+		kor: '기록 사본 및 개인정보 절차',
+	},
+	'northstar-billing-inquiry_demo-lore': { eng: 'Billing inquiry workflow', kor: '청구 문의 절차' },
+	'northstar-his-access_demo-lore': { eng: 'HIS access support', kor: '병원정보시스템 접근 지원' },
+};
+
+export const getWorkspaceEvidenceLabel = (
+	item: Pick<RagEvidenceItem, 'sourceId' | 'label'>,
+	lang: LangCode
+): string =>
+	HEALTHCARE_EVIDENCE_LABELS[item.sourceId]?.[lang] ?? item.label.replace(/^DEMO\s*[—-]\s*/i, '');
 
 export type FinanceProfileDraft = {
 	investmentGoal: string;

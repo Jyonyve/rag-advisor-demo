@@ -59,9 +59,11 @@ import {
 	type FinanceProfileDraft,
 	getSessionDomain,
 	getSessionDisplayTitle,
+	getWorkspaceEvidenceLabel,
 	type HealthcareProfileDraft,
 	summarizeDomainProfile,
 	stripFinanceAnswerNotices,
+	stripHealthcareAnswerNotices,
 	WORKSPACE_DOMAINS,
 } from './workspaceConfig.js';
 import { WorkspaceToolsDialog, type WorkspaceToolTab } from './WorkspaceToolsDialog.js';
@@ -475,7 +477,7 @@ const EvidenceSourceDetail = ({
 								? text.originalDocument
 								: text.sourceContent}
 					</span>
-					<strong>{item.label}</strong>
+					<strong>{getWorkspaceEvidenceLabel(item, lang)}</strong>
 				</div>
 				<Tooltip title={text.closeSource}>
 					<IconButton
@@ -724,11 +726,11 @@ const EvidenceInspector = ({
 										className="advisor-source-list__button"
 										type="button"
 										onClick={() => setSelectedSourceId(item.sourceId)}
-										aria-label={`${text.viewEvidence}: ${item.label}`}
+										aria-label={`${text.viewEvidence}: ${getWorkspaceEvidenceLabel(item, lang)}`}
 									>
 										<span className="advisor-source-list__dot" style={{ background: config.accent }} />
 										<div>
-											<strong>{item.label}</strong>
+											<strong>{getWorkspaceEvidenceLabel(item, lang)}</strong>
 											<small>
 												{item.origin
 													? `${item.origin === 'manual' ? text.manual : text.generated} ${text.document}`
@@ -1054,10 +1056,11 @@ const ConversationWorkspace = ({
 														text={
 															domain === 'finance'
 																? stripFinanceAnswerNotices(formatWorkspaceEntries(turn.response.entries))
-																: formatWorkspaceEntries(turn.response.entries)
+																: stripHealthcareAnswerNotices(formatWorkspaceEntries(turn.response.entries))
 														}
 														evidence={turn.evidence}
 														citationLabel={text.citation}
+														getSourceLabel={(source) => getWorkspaceEvidenceLabel(source, lang)}
 														onCitationClick={(sourceId) => handleCitationClick(turn.evidence, question, sourceId)}
 													/>
 												</div>

@@ -52,6 +52,8 @@ export const FINANCE_DEMO_NOTICE_KO =
 	'안내: 상품과 조건은 모두 가상인 교육용 예시이며, 금융·법률 자문이 아닙니다. 실제 상품을 선택하기 전에는 공식 상품 설명을 확인해 주세요.';
 export const HEALTHCARE_OPERATIONS_DEMO_NOTICE =
 	'Demo notice: This facility, workflow, and scenario are fictional demo data. This is administrative guidance, not medical advice.';
+export const HEALTHCARE_OPERATIONS_DEMO_NOTICE_KO =
+	'안내: 기관, 절차와 상황은 모두 가상 운영 예시이며, 의료 조언이 아닙니다.';
 
 export const ensureDomainDemoDisclaimer = (
 	response: string,
@@ -64,10 +66,24 @@ export const ensureDomainDemoDisclaimer = (
 		const notice = /[가-힣]/.test(response) ? FINANCE_DEMO_NOTICE_KO : FINANCE_DEMO_NOTICE;
 		return `${response.trim()}\n\n${notice}`;
 	}
-	if (character.domain === 'healthcare_operations' && !/not medical advice/i.test(response)) {
-		return `${response.trim()}\n\n${HEALTHCARE_OPERATIONS_DEMO_NOTICE}`;
+	if (
+		character.domain === 'healthcare_operations' &&
+		!/(?:not medical advice|의료\s*(?:조언|자문)이\s*아닙니다)/i.test(response)
+	) {
+		const notice = /[가-힣]/.test(response)
+			? HEALTHCARE_OPERATIONS_DEMO_NOTICE_KO
+			: HEALTHCARE_OPERATIONS_DEMO_NOTICE;
+		return `${response.trim()}\n\n${notice}`;
 	}
 	return response;
+};
+
+export const buildDomainResponseEntries = (response: string, domain: CharacterInfo['domain']) => {
+	const normalized = response.replace(/\r\n|\r/g, '\n').trim();
+	if (domain === 'finance' || domain === 'healthcare_operations') {
+		return [{ type: 'dialogue' as const, prompt: normalized }];
+	}
+	return sanitizeLlmResponse(normalized);
 };
 
 /**
@@ -429,10 +445,7 @@ async function _generateAndAppendResponse(
 	options.logger?.checkpoint('personaGeneration.complete', { emotion: personaResponse.emotion });
 
 	const finalResponseText = ensureDomainDemoDisclaimer(personaResponse.response, characterInfo);
-	const botChatEntries =
-		characterInfo.domain === 'finance'
-			? [{ type: 'dialogue' as const, prompt: finalResponseText.replace(/\r\n|\r/g, '\n').trim() }]
-			: sanitizeLlmResponse(finalResponseText);
+	const botChatEntries = buildDomainResponseEntries(finalResponseText, characterInfo.domain);
 	// 3. Create the new bot response message.
 	const request = buildChatMessage(
 		'user',

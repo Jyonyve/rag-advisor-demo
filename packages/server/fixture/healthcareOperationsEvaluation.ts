@@ -63,6 +63,21 @@ export const HEALTHCARE_OPERATIONS_EVALUATION_CASES: readonly HealthcareOperatio
 				'northstar-admission-discharge-administration',
 			],
 		},
+		{
+			id: 'korean-patient-support-admission-discharge',
+			profile: {
+				domain: 'healthcare_operations',
+				workflowTopic: 'Billing inquiry',
+				requesterRole: 'patient_support',
+				urgency: 'routine',
+				constraints: [],
+			},
+			currentMessage: '입원 및 퇴원 행정 절차를 정리해 주세요.',
+			expectedEligibleFixtureIds: [
+				'healthcare-operations-assistant-core',
+				'northstar-admission-discharge-administration',
+			],
+		},
 	] as const;
 
 export const evaluateHealthcareOperationsFixtures = () => {

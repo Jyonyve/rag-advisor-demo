@@ -19,11 +19,13 @@ export const GroundedResponse = ({
 	evidence,
 	citationLabel,
 	onCitationClick,
+	getSourceLabel,
 }: {
 	text: string;
 	evidence?: RagEvidenceDto;
 	citationLabel: string;
 	onCitationClick?: (sourceId: string) => void;
+	getSourceLabel?: (source: NonNullable<RagEvidenceDto['items']>[number]) => string;
 }) => {
 	const sources = new Map(evidence?.items.map((item) => [item.sourceId, item]) ?? []);
 	const renderInline = (line: string): ReactNode[] => {
@@ -43,7 +45,7 @@ export const GroundedResponse = ({
 						title={sourceId}
 						onClick={() => onCitationClick?.(sourceId)}
 					>
-						{citationLabel} · {source.label}
+						{citationLabel} · {getSourceLabel?.(source) ?? source.label}
 					</a>
 				);
 			} else {

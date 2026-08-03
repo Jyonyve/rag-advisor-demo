@@ -44,24 +44,18 @@ test('healthcare filtering keeps the general guide and role-appropriate requeste
 	);
 });
 
-test('healthcare filtering excludes a workflow outside the requester role', () => {
+test('Korean admission and discharge prompt remains eligible for patient support', () => {
 	const result = filterHealthcareOperationsLore(
 		healthcareLores,
 		profile({ requesterRole: 'patient_support' }),
-		'Explain the admission and discharge administrative workflow.'
+		'입원 및 퇴원 행정 절차를 정리해 주세요.'
 	);
 
 	assert.deepEqual(
 		result.eligibleLore.map(({ fixtureId }) => fixtureId),
-		['healthcare-operations-assistant-core']
+		['healthcare-operations-assistant-core', 'northstar-admission-discharge-administration']
 	);
-	assert.ok(
-		result.decisions.some(
-			({ sourceId, reasons }) =>
-				sourceId === 'northstar-admission-discharge-administration_demo-lore' &&
-				reasons.includes('requester_role_mismatch')
-		)
-	);
+	assert.equal(result.requestOverrides.workflowTopic, 'admission_discharge');
 });
 
 test('explicit requester-role overrides are temporary and do not mutate the profile', () => {
