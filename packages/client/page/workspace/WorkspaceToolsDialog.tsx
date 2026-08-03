@@ -17,6 +17,7 @@ import type {
 import { useEffect, useMemo, useState } from 'react';
 
 import { useDocumentApi, useLoreApi, useProfileApi } from '../../hook/api/index.js';
+import { useAuth } from '../../provider/AuthProvider.js';
 import { useLanguage } from '../../provider/LanguageProvider.js';
 import {
 	buildDefaultFinanceReportRequest,
@@ -174,6 +175,7 @@ export function WorkspaceToolsDialog({
 	onClose,
 }: WorkspaceToolsDialogProps) {
 	const { lang } = useLanguage();
+	const { isDemoGuest } = useAuth();
 	const text = getWorkspaceCopy(lang);
 	const config = getWorkspaceDomainConfig(domain, lang);
 	const [tab, setTab] = useState<WorkspaceToolTab>(initialTab);
@@ -552,44 +554,46 @@ export function WorkspaceToolsDialog({
 									<h3>{text.referenceHeading}</h3>
 									<p>{text.referenceNote}</p>
 								</div>
-								<div className="advisor-reference-create">
-									<label className="advisor-field">
-										<span>{text.referenceTitle}</span>
-										<input
-											value={documentTitle}
-											onChange={(event) => setDocumentTitle(event.target.value)}
-											placeholder={text.referenceTitlePlaceholder}
-										/>
-									</label>
-									<label className="advisor-field">
-										<span>{text.referenceBody}</span>
-										<textarea
-											value={documentBody}
-											onChange={(event) => setDocumentBody(event.target.value)}
-											placeholder={text.referenceBodyPlaceholder}
-											rows={5}
-										/>
-									</label>
-									<div className="advisor-reference-create__footer">
-										<label className="advisor-check-field">
+								{!isDemoGuest && (
+									<div className="advisor-reference-create">
+										<label className="advisor-field">
+											<span>{text.referenceTitle}</span>
 											<input
-												type="checkbox"
-												checked={documentIncludeInRag}
-												onChange={(event) => setDocumentIncludeInRag(event.target.checked)}
+												value={documentTitle}
+												onChange={(event) => setDocumentTitle(event.target.value)}
+												placeholder={text.referenceTitlePlaceholder}
 											/>
-											{text.requestRag}
 										</label>
-										<button
-											className="advisor-button advisor-button--primary"
-											type="button"
-											onClick={() => void createReferenceDocument()}
-											disabled={documentApi.isMutating || !documentTitle.trim() || !documentBody.trim()}
-										>
-											<PostAddRounded />
-											{text.saveDraft}
-										</button>
+										<label className="advisor-field">
+											<span>{text.referenceBody}</span>
+											<textarea
+												value={documentBody}
+												onChange={(event) => setDocumentBody(event.target.value)}
+												placeholder={text.referenceBodyPlaceholder}
+												rows={5}
+											/>
+										</label>
+										<div className="advisor-reference-create__footer">
+											<label className="advisor-check-field">
+												<input
+													type="checkbox"
+													checked={documentIncludeInRag}
+													onChange={(event) => setDocumentIncludeInRag(event.target.checked)}
+												/>
+												{text.requestRag}
+											</label>
+											<button
+												className="advisor-button advisor-button--primary"
+												type="button"
+												onClick={() => void createReferenceDocument()}
+												disabled={documentApi.isMutating || !documentTitle.trim() || !documentBody.trim()}
+											>
+												<PostAddRounded />
+												{text.saveDraft}
+											</button>
+										</div>
 									</div>
-								</div>
+								)}
 
 								<div className="advisor-document-list">
 									{documentQuery.isLoading ? (
@@ -610,15 +614,17 @@ export function WorkspaceToolsDialog({
 												</div>
 												<p>{document.body.slice(0, 240) || text.emptyDraft}</p>
 												<div className="advisor-document-list__footer">
-													<label className="advisor-check-field">
-														<input
-															type="checkbox"
-															checked={document.includeInRag}
-															disabled={document.status === 'archived' || documentApi.isMutating}
-															onChange={(event) => void toggleDocumentRetrieval(document, event.target.checked)}
-														/>
-														{text.includeInRag}
-													</label>
+													{!isDemoGuest && (
+														<label className="advisor-check-field">
+															<input
+																type="checkbox"
+																checked={document.includeInRag}
+																disabled={document.status === 'archived' || documentApi.isMutating}
+																onChange={(event) => void toggleDocumentRetrieval(document, event.target.checked)}
+															/>
+															{text.includeInRag}
+														</label>
+													)}
 													<div className="advisor-document-list__actions">
 														<button
 															type="button"
@@ -630,7 +636,7 @@ export function WorkspaceToolsDialog({
 															<VisibilityOutlined />
 															{document.status === 'draft' ? text.readDraft : text.readDocument}
 														</button>
-														{document.status === 'draft' && (
+														{!isDemoGuest && document.status === 'draft' && (
 															<button
 																type="button"
 																onClick={() => void approveDocument(document)}
@@ -756,9 +762,9 @@ export function WorkspaceToolsDialog({
 								>
 									{documentStatusLabel(selectedDocument, text)}
 								</span>
-								<small>{text.reviewComplete}</small>
+								{!isDemoGuest && <small>{text.reviewComplete}</small>}
 							</div>
-							{selectedDocument.status === 'draft' && (
+							{!isDemoGuest && selectedDocument.status === 'draft' && (
 								<button
 									className="advisor-button advisor-button--primary"
 									type="button"

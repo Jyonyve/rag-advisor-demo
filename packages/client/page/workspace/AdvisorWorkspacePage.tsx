@@ -45,7 +45,7 @@ import {
 import { useChatState } from '../../hook/state/useChatState.js';
 import { useAuth } from '../../provider/AuthProvider.jsx';
 import { useLanguage } from '../../provider/LanguageProvider.js';
-import { parseEntriesToText, parseTextToEntries } from '../../util/chatParseUtils.js';
+import { parseTextToEntries } from '../../util/chatParseUtils.js';
 import { apiClient, genApiUrl } from '../../util/clientApiHelpers.js';
 import { getEvidenceAnchorId, GroundedResponse } from './GroundedResponse.js';
 import {
@@ -65,6 +65,7 @@ import {
 	WORKSPACE_DOMAINS,
 } from './workspaceConfig.js';
 import { WorkspaceToolsDialog, type WorkspaceToolTab } from './WorkspaceToolsDialog.js';
+import { formatWorkspaceEntries } from './workspaceChatUtils.js';
 import { getWorkspaceCopy, getWorkspaceDomainConfig } from './workspaceI18n.js';
 import './advisorWorkspace.css';
 
@@ -609,8 +610,8 @@ const EvidenceInspector = ({
 					...selectedSource,
 					chatMemory: {
 						sequence: selectedMemoryTurn.sequence,
-						requestText: parseEntriesToText(selectedMemoryTurn.request.entries),
-						responseText: parseEntriesToText(selectedMemoryTurn.response.entries),
+						requestText: formatWorkspaceEntries(selectedMemoryTurn.request.entries),
+						responseText: formatWorkspaceEntries(selectedMemoryTurn.response.entries),
 					},
 				}
 			: selectedSource;
@@ -911,7 +912,7 @@ const ConversationWorkspace = ({
 	}));
 	const latestTurn = displayTurns[displayTurns.length - 1];
 	const latestEvidence = latestTurn?.evidence;
-	const latestQuestion = latestTurn ? parseEntriesToText(latestTurn.request.entries) : undefined;
+	const latestQuestion = latestTurn ? formatWorkspaceEntries(latestTurn.request.entries) : undefined;
 	useEffect(() => {
 		setInspectedEvidence(latestEvidence);
 		setInspectedQuestion(latestQuestion);
@@ -1022,7 +1023,7 @@ const ConversationWorkspace = ({
 							</div>
 						) : (
 							displayTurns.map((turn, index) => {
-								const question = parseEntriesToText(turn.request.entries);
+								const question = formatWorkspaceEntries(turn.request.entries);
 								return (
 									<article className="advisor-turn" key={turn.key}>
 										<div className="advisor-turn__index">{(index + 1).toString().padStart(2, '0')}</div>
@@ -1052,8 +1053,8 @@ const ConversationWorkspace = ({
 													<GroundedResponse
 														text={
 															domain === 'finance'
-																? stripFinanceAnswerNotices(parseEntriesToText(turn.response.entries))
-																: parseEntriesToText(turn.response.entries)
+																? stripFinanceAnswerNotices(formatWorkspaceEntries(turn.response.entries))
+																: formatWorkspaceEntries(turn.response.entries)
 														}
 														evidence={turn.evidence}
 														citationLabel={text.citation}
