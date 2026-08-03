@@ -22,23 +22,28 @@ export const HEALTHCARE_OPERATIONS_FIXTURES = deepFreeze([
 			userId: FIXTURE_OWNER_ID,
 			createdAt: FIXTURE_TIMESTAMP,
 			updatedAt: FIXTURE_TIMESTAMP,
-			title: 'DEMO — Northstar Appointment and Examination Rescheduling',
-			generatedTitle: 'DEMO — Northstar Appointment and Examination Rescheduling',
-			summary:
-				'Fictional administrative workflow for coordinating appointment and examination schedule changes.',
+			title: 'DEMO — 노스스타 예약 및 검사 일정 변경',
+			generatedTitle: 'DEMO — 노스스타 예약 및 검사 일정 변경',
+			summary: '예약과 검사 일정을 변경할 때 사용하는 행정 조정 절차.',
 			category: 'Technology',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content: `DEMO DATA ONLY. Northstar Demo Hospital uses this administrative scheduling workflow:
-1. Intake: record the demo encounter reference, requested appointment or examination, preferred date range, contact channel, and whether linked bookings must move together.
-2. Verify scope: confirm the requester is authorized to discuss scheduling and avoid collecting symptoms or unnecessary personal details.
-3. Check dependencies: review department availability, preparation windows, linked examinations, and any existing administrative holds.
-4. Coordinate: send the proposed change to the scheduling desk and obtain confirmation before treating the booking as changed.
-5. Close: record the administrative reason, old and new time, responsible desk, confirmation channel, and any unresolved dependency.
-Time-sensitive administrative requests go to the scheduling supervisor. Possible clinical urgency is outside this workflow and must be handed to qualified clinical staff rather than assessed by the requester.`,
+			content: `데모 데이터 전용. 노스스타 데모 병원은 다음과 같이 예약 및 검사 일정을 행정적으로 변경합니다.
+1. 접수: 데모 진료 참조번호, 변경할 예약 또는 검사, 희망 날짜 범위, 연락 방법, 함께 변경해야 하는 연계 예약을 기록합니다.
+2. 권한 확인: 요청자가 일정 정보를 논의할 권한이 있는지 확인하고 증상이나 불필요한 개인정보는 수집하지 않습니다.
+3. 연계 조건 확인: 담당 부서의 가능 시간, 검사 준비 기간, 연계 검사와 기존 행정 보류 사항을 확인합니다.
+4. 일정 조정: 변경안을 일정 담당 부서에 전달하고 확인을 받기 전에는 변경이 확정된 것으로 안내하지 않습니다.
+5. 완료 기록: 변경 사유, 이전·변경 시간, 담당 부서, 확인 방법과 해결되지 않은 연계 사항을 기록합니다.
+시간이 중요한 행정 요청은 일정 관리 책임자에게 전달합니다. 임상적 긴급성은 이 절차에서 판단하지 않고 자격을 갖춘 임상 담당자에게 연결합니다.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
-			keywordList: ['appointment change', 'examination rescheduling', 'scheduling desk'],
-			topicList: ['fictional healthcare administration'],
+			keywordList: [
+				'예약 변경',
+				'검사 일정 변경',
+				'일정 담당 부서',
+				'appointment change',
+				'examination rescheduling',
+			],
+			topicList: ['의료 행정', 'healthcare administration'],
 			entityList: ['DEMO-OPS-SCHEDULE-101'],
 			domain: 'healthcare_operations',
 			fixtureId: 'northstar-appointment-rescheduling',
@@ -63,27 +68,33 @@ Time-sensitive administrative requests go to the scheduling supervisor. Possible
 			userId: FIXTURE_OWNER_ID,
 			createdAt: FIXTURE_TIMESTAMP,
 			updatedAt: FIXTURE_TIMESTAMP,
-			title: 'DEMO — Northstar Admission and Discharge Administration',
-			generatedTitle: 'DEMO — Northstar Admission and Discharge Administration',
-			summary: 'Fictional checklist for administrative admission and discharge record coordination.',
+			title: 'DEMO — 노스스타 입원·퇴원 행정 절차',
+			generatedTitle: 'DEMO — 노스스타 입원·퇴원 행정 절차',
+			summary: '입원 및 퇴원 기록과 부서 간 인계를 조정하는 행정 체크리스트.',
 			category: 'Other',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content: `DEMO DATA ONLY. Northstar Demo Hospital separates admission and discharge administration from clinical decisions.
-Admission coordination:
-1. Confirm the demo encounter identifier, responsible department, requester role, and planned admission date.
-2. Check that required administrative forms are present and route incomplete items to the owning administrative desk.
-3. Record the billing handoff status and the patient's selected document-delivery and contact preferences.
-4. Confirm completion with the receiving department and record any unresolved administrative dependency.
-Discharge coordination:
-1. Begin only after qualified clinical staff record the discharge decision; administrative staff never make that decision.
-2. Confirm the encounter identifier, responsible department, required administrative documents, billing handoff, and delivery preference.
-3. Route missing documents to their owner, record expected completion, and avoid inventing treatment instructions or clinical clearance.
-4. Close the administrative checklist only when each handoff has an owner and status; escalate time-sensitive gaps to the operations supervisor.
-Patient-support staff may explain status and coordinate the documented handoffs, but may not approve admission, discharge, treatment, or clinical instructions.`,
+			content: `데모 데이터 전용. 노스스타 데모 병원은 입원·퇴원 행정과 임상 결정을 분리합니다.
+입원 행정:
+1. 데모 진료 식별자, 담당 부서, 요청자 역할과 예정 입원일을 확인합니다.
+2. 필요한 행정 서류가 준비되었는지 확인하고 미완료 항목은 해당 행정 담당 부서에 전달합니다.
+3. 청구 부서 인계 상태와 문서 수령 및 연락 방법을 기록합니다.
+4. 접수 부서에 완료 여부를 확인하고 해결되지 않은 행정 연계 사항을 기록합니다.
+퇴원 행정:
+1. 자격을 갖춘 임상 담당자가 퇴원 결정을 기록한 뒤에만 시작합니다. 행정 담당자는 퇴원을 결정하지 않습니다.
+2. 진료 식별자, 담당 부서, 필요한 행정 문서, 청구 인계와 문서 수령 방법을 확인합니다.
+3. 누락 문서는 담당 부서에 전달하고 예상 완료 시점을 기록합니다. 치료 지시나 임상적 승인 내용을 만들어 내지 않습니다.
+4. 모든 인계에 담당자와 상태가 기록된 경우에만 행정 체크리스트를 종료합니다. 시간이 중요한 누락 사항은 운영 책임자에게 전달합니다.
+환자 지원 담당자는 기록된 인계의 상태를 설명하고 조정할 수 있지만 입원, 퇴원, 치료 또는 임상 지시를 승인할 수 없습니다.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
-			keywordList: ['admission administration', 'discharge administration', 'forms'],
-			topicList: ['fictional healthcare administration'],
+			keywordList: [
+				'입원 행정',
+				'퇴원 행정',
+				'행정 서류',
+				'admission administration',
+				'discharge administration',
+			],
+			topicList: ['의료 행정', 'healthcare administration'],
 			entityList: ['DEMO-OPS-ADMIT-205'],
 			domain: 'healthcare_operations',
 			fixtureId: 'northstar-admission-discharge-administration',
@@ -108,24 +119,30 @@ Patient-support staff may explain status and coordinate the documented handoffs,
 			userId: FIXTURE_OWNER_ID,
 			createdAt: FIXTURE_TIMESTAMP,
 			updatedAt: FIXTURE_TIMESTAMP,
-			title: 'DEMO — Northstar Record Copy and Privacy Procedure',
-			generatedTitle: 'DEMO — Northstar Record Copy and Privacy Procedure',
-			summary:
-				'Fictional identity, authorization, access, and correction procedure for record-copy requests.',
+			title: 'DEMO — 노스스타 기록 사본 및 개인정보 절차',
+			generatedTitle: 'DEMO — 노스스타 기록 사본 및 개인정보 절차',
+			summary: '기록 사본 요청의 본인 확인, 권한 범위, 제공 및 정정 처리 절차.',
 			category: 'Politics',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content: `DEMO DATA ONLY. Northstar Demo Hospital uses this record-copy and correction-request workflow:
-1. Intake: capture the demo request reference, request type, requested record category and date range, and preferred delivery channel.
-2. Verify: record identity-verification status and the authorization scope without copying unnecessary identity data into free text.
-3. Scope: compare the requested material with the verified authorization and pause any item outside that scope.
-4. Route: send copy requests to records fulfillment and correction requests to the record-owning department; do not alter source records in the support workflow.
-5. Audit: record who accepted the request, the route, status, delivery channel, and each disclosure decision.
-6. Escalate: send ambiguous authority, privacy complaints, or time-sensitive exceptions to the privacy lead.
-Staff must not disclose content beyond the verified scope or promise that a requested correction will be accepted.`,
+			content: `데모 데이터 전용. 노스스타 데모 병원은 다음과 같이 기록 사본 및 정정 요청을 처리합니다.
+1. 접수: 데모 요청 참조번호, 요청 유형, 필요한 기록 종류와 기간, 희망 수령 방법을 기록합니다.
+2. 본인 및 권한 확인: 불필요한 신원 정보를 자유 입력란에 복사하지 않고 본인 확인 상태와 위임 범위를 기록합니다.
+3. 범위 확인: 요청 자료를 확인된 권한 범위와 비교하고 범위를 벗어난 항목은 처리를 보류합니다.
+4. 담당 부서 전달: 사본 요청은 기록 제공 담당에, 정정 요청은 원 기록을 관리하는 부서에 전달합니다. 지원 절차에서 원 기록을 직접 변경하지 않습니다.
+5. 처리 이력 기록: 접수자, 전달 부서, 처리 상태, 제공 방법과 각 제공 결정을 기록합니다.
+6. 예외 전달: 권한이 불명확한 경우, 개인정보 관련 이의 또는 시간이 중요한 예외는 개인정보 보호 책임자에게 전달합니다.
+확인된 권한 범위를 넘는 내용을 제공하거나 정정 요청이 승인될 것이라고 약속해서는 안 됩니다.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
-			keywordList: ['record copy', 'privacy access', 'correction request'],
-			topicList: ['fictional healthcare privacy administration'],
+			keywordList: [
+				'기록 사본',
+				'개인정보 열람',
+				'정정 요청',
+				'record copy',
+				'privacy access',
+				'correction request',
+			],
+			topicList: ['의료 개인정보 행정', 'healthcare privacy administration'],
 			entityList: ['DEMO-OPS-PRIVACY-310'],
 			domain: 'healthcare_operations',
 			fixtureId: 'northstar-record-copy-and-privacy',
@@ -150,23 +167,29 @@ Staff must not disclose content beyond the verified scope or promise that a requ
 			userId: FIXTURE_OWNER_ID,
 			createdAt: FIXTURE_TIMESTAMP,
 			updatedAt: FIXTURE_TIMESTAMP,
-			title: 'DEMO — Northstar Billing Inquiry Workflow',
-			generatedTitle: 'DEMO — Northstar Billing Inquiry Workflow',
-			summary: 'Fictional workflow for routing billing questions and disputed line items.',
+			title: 'DEMO — 노스스타 청구 문의 절차',
+			generatedTitle: 'DEMO — 노스스타 청구 문의 절차',
+			summary: '청구 질문과 이의 제기된 항목을 확인하고 담당 부서에 전달하는 절차.',
 			category: 'Other',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content: `DEMO DATA ONLY. Northstar Demo Hospital uses this billing-inquiry workflow:
-1. Intake: confirm the demo invoice reference, requester contact channel, and whether the question concerns a payment status, invoice copy, line item, or disputed charge.
-2. Verify: confirm the requester is authorized to discuss the invoice and avoid collecting payment-card or unnecessary personal data in notes.
-3. Document: identify the questioned line item, amount shown on the demo invoice, service date shown, and the requester's stated reason without changing the source invoice.
-4. Route: send invoice-copy and payment-status requests to billing support; send disputed line items to billing review with the relevant line attached.
-5. Communicate: provide the ticket reference, owning desk, current status, and next update point.
-6. Close or escalate: close only after the billing desk records an outcome; escalate duplicate charges, unresolved ownership, or missed update commitments to the billing supervisor.
-Patient-support staff may explain process and status but must not invent coverage, prices, refunds, or clinical justification.`,
+			content: `데모 데이터 전용. 노스스타 데모 병원은 다음과 같이 청구 문의를 처리합니다.
+1. 접수: 데모 청구서 참조번호, 요청자 연락 방법, 문의 유형이 납부 상태·청구서 사본·세부 항목·이의 제기 중 무엇인지 확인합니다.
+2. 권한 확인: 요청자가 청구 정보를 논의할 권한이 있는지 확인하고 카드 정보나 불필요한 개인정보를 메모에 남기지 않습니다.
+3. 문의 기록: 원 청구서를 변경하지 않고 문의한 세부 항목, 데모 청구서에 표시된 금액과 서비스 날짜, 요청자가 설명한 사유를 기록합니다.
+4. 담당 부서 전달: 청구서 사본과 납부 상태 문의는 청구 지원 담당에, 이의 제기 항목은 해당 항목을 첨부해 청구 검토 담당에 전달합니다.
+5. 진행 안내: 접수번호, 담당 부서, 현재 상태와 다음 안내 예정 시점을 알려 줍니다.
+6. 종료 또는 상향 전달: 청구 담당 부서가 결과를 기록한 뒤에만 종료합니다. 중복 청구, 담당 불명 또는 안내 기한 누락은 청구 책임자에게 전달합니다.
+환자 지원 담당자는 절차와 상태를 설명할 수 있지만 보장 범위, 가격, 환불 또는 임상적 사유를 만들어 내서는 안 됩니다.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
-			keywordList: ['billing inquiry', 'invoice question', 'billing desk'],
-			topicList: ['fictional healthcare billing administration'],
+			keywordList: [
+				'청구 문의',
+				'청구서 질문',
+				'청구 담당 부서',
+				'billing inquiry',
+				'invoice question',
+			],
+			topicList: ['의료 청구 행정', 'healthcare billing administration'],
 			entityList: ['DEMO-OPS-BILLING-420'],
 			domain: 'healthcare_operations',
 			fixtureId: 'northstar-billing-inquiry',
@@ -191,23 +214,29 @@ Patient-support staff may explain process and status but must not invent coverag
 			userId: FIXTURE_OWNER_ID,
 			createdAt: FIXTURE_TIMESTAMP,
 			updatedAt: FIXTURE_TIMESTAMP,
-			title: 'DEMO — Northstar HIS Access Support',
-			generatedTitle: 'DEMO — Northstar HIS Access Support',
-			summary: 'Fictional role-aware HIS access request and account-support operating instructions.',
+			title: 'DEMO — 노스스타 병원정보시스템 접근 지원',
+			generatedTitle: 'DEMO — 노스스타 병원정보시스템 접근 지원',
+			summary: '역할에 따른 병원정보시스템 접근 요청과 계정 지원 절차.',
 			category: 'Technology',
 			type: METADATA_TYPES.LORE,
 			source: 'fictional-demo-fixture',
-			content: `DEMO DATA ONLY. Northstar Demo Hospital uses this HIS access-support workflow:
-1. Intake: record the demo staff reference, requester role, requested module, business task, access type, and requested duration.
-2. Verify approval: confirm the named supervisor and approval status; support staff do not approve their own request.
-3. Minimize scope: compare the request with the role template and route only the least-privilege access needed for the stated task.
-4. Route: send new or changed access to identity administration; send login failures for existing access to the service desk.
-5. Protect secrets: never place passwords, recovery codes, access tokens, or unnecessary personal staff details in the ticket.
-6. Confirm and audit: record the owning team, ticket reference, granted scope or rejection reason, expiry when temporary, and requester notification.
-Time-sensitive access failures follow the service-desk escalation path. Suspected unauthorized access is escalated to security and is not resolved by granting broader permissions.`,
+			content: `데모 데이터 전용. 노스스타 데모 병원은 다음과 같이 병원정보시스템 접근을 지원합니다.
+1. 접수: 데모 직원 참조번호, 요청자 역할, 필요한 모듈, 업무 목적, 접근 유형과 필요 기간을 기록합니다.
+2. 승인 확인: 지정된 책임자와 승인 상태를 확인합니다. 지원 담당자는 자신의 요청을 직접 승인하지 않습니다.
+3. 최소 권한 확인: 요청을 역할별 권한 기준과 비교하고 해당 업무에 필요한 최소 범위만 전달합니다.
+4. 담당 부서 전달: 신규 또는 변경 접근은 계정·권한 관리 담당에, 기존 권한의 로그인 실패는 서비스 데스크에 전달합니다.
+5. 비밀정보 보호: 비밀번호, 복구 코드, 접근 토큰 또는 불필요한 직원 개인정보를 접수 내용에 기록하지 않습니다.
+6. 확인 및 이력 기록: 담당 팀, 접수번호, 부여된 범위 또는 거절 사유, 임시 권한의 만료일과 요청자 통보 여부를 기록합니다.
+시간이 중요한 접근 장애는 서비스 데스크의 상향 전달 절차를 따릅니다. 무단 접근이 의심되면 보안 담당에 전달하며 권한을 넓혀 해결하지 않습니다.`,
 			characterIds: [HEALTHCARE_CHARACTER_ID],
-			keywordList: ['HIS access', 'role permission', 'service desk'],
-			topicList: ['fictional healthcare information system'],
+			keywordList: [
+				'병원정보시스템 접근',
+				'역할 권한',
+				'서비스 데스크',
+				'HIS access',
+				'role permission',
+			],
+			topicList: ['의료 정보시스템', 'healthcare information system'],
 			entityList: ['DEMO-OPS-HIS-515'],
 			domain: 'healthcare_operations',
 			fixtureId: 'northstar-his-access',

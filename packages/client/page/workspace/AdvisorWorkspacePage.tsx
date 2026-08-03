@@ -32,7 +32,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { EmailPasswordPreBuiltUI } from 'supertokens-auth-react/recipe/emailpassword/prebuiltui.js';
 import { AuthPage } from 'supertokens-auth-react/ui/index.js';
-import { isPublicDemoMode } from '../../util/publicDemoUtils.js';
+import {
+	DEMO_USAGE_RESERVED_EVENT,
+	isPublicDemoMode,
+	reserveDemoUsageLocally,
+} from '../../util/publicDemoUtils.js';
 
 import {
 	useCharacterApi,
@@ -811,7 +815,7 @@ const ConversationWorkspace = ({
 	const text = getWorkspaceCopy(lang);
 	const domain = getSessionDomain(session) ?? profile.domainProfile?.domain ?? 'finance';
 	const config = getWorkspaceDomainConfig(domain, lang);
-	const { userId } = useAuth();
+	const { userId, isDemoGuest } = useAuth();
 	const { chatTurns, isLoadingHistory, addChatTurn, getNextSequence } = useChatState(
 		session.sessionId
 	);
@@ -868,6 +872,9 @@ const ConversationWorkspace = ({
 		setStreamingText('');
 		setStage('preparing');
 		setIsProcessing(true);
+		if (isDemoGuest) {
+			window.dispatchEvent(new CustomEvent(DEMO_USAGE_RESERVED_EVENT, { detail: { kind: 'chat' } }));
+		}
 		abortRef.current?.abort();
 		const controller = new AbortController();
 		abortRef.current = controller;
@@ -892,6 +899,7 @@ const ConversationWorkspace = ({
 				}),
 			});
 		} catch (cause) {
+			if (isDemoGuest) window.dispatchEvent(new CustomEvent('demo-usage-updated'));
 			if (!controller.signal.aborted) {
 				console.error('Guidance request failed:', cause);
 				setInput(trimmed);
@@ -1265,8 +1273,17 @@ export function AdvisorWorkspacePage() {
 			if (usage) setDemoUsage(usage);
 			else void refreshDemoUsage();
 		};
+		const handleReservation = (event: Event) => {
+			const kind = (event as CustomEvent<{ kind?: 'chat' | 'report' }>).detail?.kind;
+			if (!kind) return;
+			setDemoUsage((current) => (current ? reserveDemoUsageLocally(current, kind) : current));
+		};
 		window.addEventListener('demo-usage-updated', handleUsage);
-		return () => window.removeEventListener('demo-usage-updated', handleUsage);
+		window.addEventListener(DEMO_USAGE_RESERVED_EVENT, handleReservation);
+		return () => {
+			window.removeEventListener('demo-usage-updated', handleUsage);
+			window.removeEventListener(DEMO_USAGE_RESERVED_EVENT, handleReservation);
+		};
 	}, [refreshDemoUsage]);
 	const supportedSessions = useMemo(
 		() =>

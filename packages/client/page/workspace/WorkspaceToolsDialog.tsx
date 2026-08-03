@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDocumentApi, useLoreApi, useProfileApi } from '../../hook/api/index.js';
 import { useAuth } from '../../provider/AuthProvider.js';
 import { useLanguage } from '../../provider/LanguageProvider.js';
+import { DEMO_USAGE_RESERVED_EVENT } from '../../util/publicDemoUtils.js';
 import {
 	buildDefaultFinanceReportRequest,
 	buildFinanceDomainProfile,
@@ -343,6 +344,9 @@ export function WorkspaceToolsDialog({
 		if (!reportRequest.trim()) return;
 		setError(undefined);
 		setMessage(undefined);
+		if (isDemoGuest) {
+			window.dispatchEvent(new CustomEvent(DEMO_USAGE_RESERVED_EVENT, { detail: { kind: 'report' } }));
+		}
 		try {
 			const generated = await documentApi.generateFinanceReport({
 				sessionId: session.sessionId,
@@ -354,6 +358,7 @@ export function WorkspaceToolsDialog({
 			setSelectedDocumentSnapshot(generated.documentInfo);
 			setSelectedDocumentId(generated.documentInfo.documentId);
 		} catch (cause) {
+			if (isDemoGuest) window.dispatchEvent(new CustomEvent('demo-usage-updated'));
 			console.error('Finance report generation failed:', cause);
 			setError(text.reportCreateFailed);
 		}
