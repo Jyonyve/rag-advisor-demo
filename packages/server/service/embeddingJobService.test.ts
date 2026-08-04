@@ -7,11 +7,12 @@ const waitForTerminalStatus = async (
 	service: ReturnType<typeof createEmbeddingJobService>,
 	input: Pick<ReplaceMemoryEmbeddingInput, 'sourceType' | 'sourceId'>
 ) => {
-	for (let count = 0; count < 100; count += 1) {
+	const deadline = Date.now() + 2_000;
+	do {
 		const job = service.get(input);
 		if (job?.status === 'completed' || job?.status === 'failed') return job;
-		await new Promise((resolve) => setTimeout(resolve, 1));
-	}
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	} while (Date.now() < deadline);
 	throw new Error(`Embedding job ${input.sourceType}:${input.sourceId} did not finish.`);
 };
 
